@@ -27,7 +27,9 @@
             python.pkgs.pip
             python.pkgs.virtualenv
 
-            nodejs_26
+            # Default LTS so downstreams using `nixpkgs.follows` aren't
+            # forced onto a specific major (some pins lag the unstable tip).
+            nodejs
             git
             just
             cmake

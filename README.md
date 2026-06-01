@@ -1,6 +1,6 @@
 # odysseus-nix
 
-A Nix flake that provides a reproducible dev environment for [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) — Python 3.12, Node 26, and every system-level dep needed to build the native Python wheels.
+A Nix flake providing a reproducible dev environment for [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) — Python 3.12, Node.js (LTS), and every system-level dep needed to build the native Python wheels.
 
 Works on:
 
@@ -46,24 +46,28 @@ Then either `uvicorn app:app --reload` or `just dev`.
 
 The Quickstart above. `nix run` is the one-shot "just start the server" path; `nix develop` is the interactive shell with the full toolchain on `$PATH`.
 
-You can pin a version:
+Both forms always resolve `main` by default. To pin to a specific commit (recommended for reproducibility in scripts / CI):
 
 ```sh
-nix run github:KangaZero/odysseus-nix/main
-nix develop github:KangaZero/odysseus-nix/v0.1.0   # if you tag
+nix run github:KangaZero/odysseus-nix/<commit-sha>
+nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
-### 2. Add as an input to your own flake
+Best practice is to consume this flake as an input from your own flake (next section) so the rev is captured in your `flake.lock`.
 
-Pull in the dev shell or packages from your own `flake.nix`:
+### 2. Add as an input to your own flake
 
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    odysseus-nix.url = "github:KangaZero/odysseus-nix";
-    # Optional: share your nixpkgs to avoid downloading two copies.
-    odysseus-nix.inputs.nixpkgs.follows = "nixpkgs";
+    odysseus-nix = {
+      url = "github:KangaZero/odysseus-nix";
+      # Share your nixpkgs to avoid fetching a second copy and to keep
+      # versions consistent. The flake uses `pkgs.nodejs` (default LTS),
+      # so it follows whatever nixpkgs you pin.
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = { self, nixpkgs, odysseus-nix, ... }: {
@@ -84,7 +88,7 @@ Pull in the dev shell or packages from your own `flake.nix`:
 
 ### 3. Add to home-manager
 
-Pull `odysseus-env` (a buildEnv of every tool the dev shell ships) into your user profile:
+**Recommended:** add the `odysseus-dev` launcher so `odysseus-dev` is on your `$PATH` everywhere. It's a single script with no toolchain in your user profile, so there are no collisions with packages you already have (`just`, `nodejs`, `curl`, etc.).
 
 ```nix
 # flake.nix
@@ -93,18 +97,19 @@ Pull `odysseus-env` (a buildEnv of every tool the dev shell ships) into your use
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
-    odysseus-nix.url = "github:KangaZero/odysseus-nix";
-    odysseus-nix.inputs.nixpkgs.follows = "nixpkgs";
+    odysseus-nix = {
+      url = "github:KangaZero/odysseus-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, odysseus-nix, ... }: {
+  outputs = { nixpkgs, home-manager, odysseus-nix, ... }: {
     homeConfigurations."you" = home-manager.lib.homeManagerConfiguration {
       pkgs = import nixpkgs { system = "aarch64-darwin"; };
-      modules = [{
+      extraSpecialArgs = { inherit odysseus-nix; };
+      modules = [{ pkgs, odysseus-nix, ... }: {
         home.packages = [
-          odysseus-nix.packages.aarch64-darwin.odysseus-env
-          # or just the launcher:
-          # odysseus-nix.packages.aarch64-darwin.odysseus-dev
+          odysseus-nix.packages.${pkgs.stdenv.hostPlatform.system}.odysseus-dev
         ];
       }];
     };
@@ -112,14 +117,9 @@ Pull `odysseus-env` (a buildEnv of every tool the dev shell ships) into your use
 }
 ```
 
-After `home-manager switch`, `python3.12`, `node`, `just`, `cmake`, etc. are on `$PATH` for your user — no `nix develop` required.
+After `home-manager switch`, `odysseus-dev [path-to-checkout]` works from any shell.
 
-You can also install ad-hoc via `nix profile`:
-
-```sh
-nix profile install github:KangaZero/odysseus-nix#odysseus-env
-nix profile install github:KangaZero/odysseus-nix#odysseus-dev
-```
+**Alternative:** if you actually want every tool (Python 3.12, Node, just, cmake, statix, …) surfaced at the user level — not just the launcher — swap `odysseus-dev` for `odysseus-env` above. ⚠️ Heads-up: `odysseus-env` is a `buildEnv` aggregating ~20 packages, so it'll collide with anything you have in `home.packages` that ships the same binary (commonly `just`, `nodejs`, `curl`, `git`, `cmake`). Remove those from your `home.packages` first, or stick with `odysseus-dev` and use `nix develop github:KangaZero/odysseus-nix` for the full toolchain on demand.
 
 ## What the dev shell does
 
@@ -207,9 +207,10 @@ The shell now auto-loads whenever you `cd` in.
 System-level deps mirror the project Dockerfile so native Python wheels build cleanly on every supported arch:
 
 - Python 3.12 + pip + virtualenv
-- Node.js 26 (for the optional Browser MCP server)
+- Node.js (default LTS from the consuming nixpkgs — currently 22/24 on `nixos-unstable`)
 - just (task runner)
 - git, cmake, curl, tmux, openssh, pkg-config
+- nixpkgs-fmt, statix, deadnix, shellcheck (used by `just test`)
 - zlib, openssl, libffi, libxml2/xslt (wheel build headers)
 - gosu (Linux only — used by the Docker entrypoint)
 
@@ -221,8 +222,8 @@ Python packages themselves are installed via `pip` into the venv, not Nix — ke
 |---|---|
 | `devShells.${system}.default` | Interactive dev shell (consumed by `nix develop`). |
 | `packages.${system}.default` | Alias for `odysseus-env`. |
-| `packages.${system}.odysseus-env` | buildEnv of all bundled tools — for home-manager / `nix profile`. |
-| `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. |
+| `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced. |
+| `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. Recommended for home-manager. |
 | `apps.${system}.default` | Same launcher, exposed for `nix run`. |
 | `formatter.${system}` | `nixpkgs-fmt`. |
 
