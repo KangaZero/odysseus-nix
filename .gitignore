@@ -2,3 +2,6 @@
 .venv/
 result
 result-*
+
+# Local Claude Code settings
+.claude/

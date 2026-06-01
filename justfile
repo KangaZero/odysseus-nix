@@ -1,17 +1,72 @@
-# Common odysseus dev tasks. Run `just` for the list.
+# Common odysseus-nix dev tasks. Run `just` for the list.
 #
-# Recipes operate on the odysseus checkout pointed to by $ODYSSEUS_DIR
-# (default: ../odysseus relative to this flake folder). The nix devShell
-# sets this automatically.
+# App recipes (run, dev, pytest, docker-*, install-*) operate on the
+# odysseus checkout pointed to by $ODYSSEUS_DIR (default: ../odysseus
+# relative to this flake folder). The nix devShell sets this automatically.
+#
+# Flake/CI recipes (test, fmt, fmt-check, lint, check, build) operate on
+# this flake folder itself and are what CI / git pre-push enforce.
 
 set shell := ["bash", "-cu"]
 set dotenv-load := true
 
 odysseus_dir := env_var_or_default("ODYSSEUS_DIR", justfile_directory() + "/../odysseus")
 port := env_var_or_default("APP_PORT", "7000")
+flake_dir := justfile_directory()
 
 default:
     @just --list
+
+# ─── CI gate ──────────────────────────────────────────────────────────────
+# The one command CI runs and the git pre-push hook enforces. Any failure
+# here blocks a push. Keep it fast — pure-Nix checks, no network beyond the
+# flake inputs already in the lock file.
+
+# Run every check the CI / pre-push hook enforces.
+test: fmt-check lint check build
+    @echo ""
+    @echo "✅ all checks passed"
+
+# Verify nix files are formatted (no writes). Run `just fmt` to fix.
+fmt-check:
+    @echo "→ nixpkgs-fmt --check"
+    cd "{{flake_dir}}" && nixpkgs-fmt --check flake.nix
+
+# Lint nix files: statix (anti-patterns) + deadnix (dead bindings) +
+# shellcheck (hooks).
+lint:
+    @echo "→ statix check"
+    cd "{{flake_dir}}" && statix check .
+    @echo "→ deadnix --fail"
+    cd "{{flake_dir}}" && deadnix --fail .
+    @echo "→ shellcheck .githooks/pre-push"
+    cd "{{flake_dir}}" && shellcheck .githooks/pre-push
+
+# Validate the flake outputs across all systems (no remote build).
+check:
+    @echo "→ nix flake check --all-systems"
+    cd "{{flake_dir}}" && nix flake check --all-systems
+
+# Build every exposed package for the current system.
+build:
+    @echo "→ nix build .#default .#odysseus-dev"
+    cd "{{flake_dir}}" && nix build .#default .#odysseus-dev --no-link --print-out-paths
+
+# Format nix files in-place.
+fmt:
+    cd "{{flake_dir}}" && nixpkgs-fmt flake.nix
+
+# Update flake.lock to the latest nixpkgs/flake-utils.
+lock-update:
+    nix flake update
+
+# Install the git pre-push hook so `just test` runs before every push.
+install-hooks:
+    git config core.hooksPath .githooks
+    @echo "✅ git pre-push hook active (runs `just test`)"
+    @echo "   uninstall: git config --unset core.hooksPath"
+
+# ─── Odysseus app recipes ─────────────────────────────────────────────────
 
 # Install core Python deps into the active venv.
 install:
@@ -35,8 +90,8 @@ run:
 # Alias for `run`.
 dev: run
 
-# Run the test suite.
-test *args:
+# Run the odysseus pytest suite.
+pytest *args:
     cd "{{odysseus_dir}}" && pytest {{args}}
 
 # Build and start the docker-compose stack.
@@ -50,18 +105,6 @@ docker-down:
 # Tail docker-compose logs.
 docker-logs:
     cd "{{odysseus_dir}}" && docker compose logs -f
-
-# Format this flake.
-fmt:
-    nix fmt
-
-# Update flake.lock to the latest nixpkgs/flake-utils.
-lock-update:
-    nix flake update
-
-# Validate the flake.
-check:
-    nix flake check
 
 # Print resolved paths and versions.
 info:
