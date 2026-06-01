@@ -69,6 +69,17 @@
 
           allDeps = commonDeps ++ linuxDeps ++ darwinDeps;
 
+          # Runtime dlopen path for pip-installed manylinux wheels (numpy,
+          # onnxruntime, PyMuPDF, etc.) — they ship binaries linked against
+          # `libstdc++.so.6` / `libz.so.1` and won't find them under Nix
+          # without an explicit LD_LIBRARY_PATH. Linux-only; on Darwin the
+          # loader uses @rpath and this var is ignored.
+          wheelLibPath = pkgs.lib.optionalString pkgs.stdenv.isLinux
+            (pkgs.lib.makeLibraryPath [
+              pkgs.stdenv.cc.cc.lib
+              pkgs.zlib
+            ]);
+
           # Aggregated environment so home-manager / `nix profile install`
           # users can pull in all the tooling with a single package.
           odysseusEnv = pkgs.buildEnv {
@@ -117,6 +128,12 @@
 
               cd "$target"
               mkdir -p data logs services/cache/search
+
+              # Make pip-installed manylinux wheels (numpy etc.) find
+              # libstdc++/libz at runtime. No-op on Darwin (empty string).
+              if [ -n "${wheelLibPath}" ]; then
+                export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+              fi
 
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
               if [ ! -d "$VENV_DIR" ]; then
@@ -175,6 +192,12 @@
               # data/app.db, so a missing dir gives "unable to open database file").
               if [ -d "$ODYSSEUS_DIR" ]; then
                 mkdir -p "$ODYSSEUS_DIR/data" "$ODYSSEUS_DIR/logs" "$ODYSSEUS_DIR/services/cache/search"
+              fi
+
+              # Make pip-installed manylinux wheels (numpy etc.) find
+              # libstdc++/libz at runtime. No-op on Darwin.
+              if [ -n "${wheelLibPath}" ]; then
+                export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
               fi
 
               # One venv per project, kept out of the source tree.
