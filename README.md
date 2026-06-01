@@ -192,7 +192,7 @@ just info             # print resolved paths + versions
 
 ## CI & git pre-push hook
 
-`.github/workflows/ci.yml` runs `just test` on every push and PR on both `ubuntu-latest` and `macos-latest` via the [Determinate Systems nix-installer](https://github.com/DeterminateSystems/nix-installer-action) + [magic-nix-cache](https://github.com/DeterminateSystems/magic-nix-cache-action).
+`.github/workflows/ci.yml` runs `just test` on every push and PR on both `ubuntu-latest` and `macos-latest` via the [Determinate Systems nix-installer](https://github.com/DeterminateSystems/nix-installer-action). No external cache service required — runs are 2-5 min cold; add Cachix or FlakeHub later if you need it faster.
 
 To require those checks before merging, enable branch protection on `main` in repo settings → Branches → Add rule:
 
