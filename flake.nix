@@ -26,8 +26,9 @@
           python.pkgs.pip
           python.pkgs.virtualenv
 
-          nodejs_20
+          nodejs_26
           git
+          just
           cmake
           curl
           tmux

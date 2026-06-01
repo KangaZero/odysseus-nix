@@ -25,7 +25,33 @@ The shell:
 
 1. `cd`s into `$ODYSSEUS_DIR` if it exists.
 2. Creates/activates `.venv/` inside that checkout.
-3. Leaves you to run `pip install -r requirements.txt` and `uvicorn app:app --reload --port 7000`.
+3. Leaves you to run the recipes below (or `pip install -r requirements.txt` + `uvicorn app:app --reload --port 7000` directly).
+
+## Just recipes
+
+A [`justfile`](./justfile) ships alongside the flake. From this folder, after `nix develop`:
+
+```sh
+just                  # list all recipes
+just install          # pip install -r requirements.txt
+just install-optional # pip install -r requirements-optional.txt
+just install-node     # npm install
+just install-all      # install + install-node
+just run              # uvicorn app:app --reload --host 0.0.0.0 --port $APP_PORT
+just dev              # alias for `run`
+just test [args...]   # pytest, with optional args (e.g. `just test -k auth`)
+just docker-up        # docker compose up --build -d
+just docker-down      # docker compose down
+just docker-logs      # docker compose logs -f
+just fmt              # nix fmt
+just check            # nix flake check
+just lock-update      # nix flake update
+just info             # print resolved paths + versions
+```
+
+All recipes operate on `$ODYSSEUS_DIR` (defaulted to `../odysseus`). `APP_PORT` overrides the dev-server port.
+
+> Run `just` from inside this `odysseus-nix/` folder, not from the odysseus checkout — the devShell auto-cds into odysseus, so use `just -f ~/Documents/odysseus-nix/justfile <recipe>` from there, or just open a separate shell in this folder.
 
 ## direnv
 
@@ -36,7 +62,8 @@ If you use [direnv](https://direnv.net/), this folder ships a `.envrc` (`use fla
 System-level deps mirror the project Dockerfile so native Python wheels build cleanly:
 
 - Python 3.12 + pip + virtualenv
-- Node.js 20 (for the optional Browser MCP server)
+- Node.js 26 (for the optional Browser MCP server)
+- just (task runner — see recipes above)
 - git, cmake, curl, tmux, openssh, pkg-config
 - zlib, openssl, libffi, libxml2/xslt (wheel build headers)
 - gosu (Linux only — used by the Docker entrypoint)
