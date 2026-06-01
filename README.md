@@ -67,6 +67,15 @@ nix run github:KangaZero/odysseus-nix/<commit-sha>
 nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
+You can also target a release branch — `v0.1.0` bakes in an upstream odysseus rev (the managed cache clone auto-syncs to it on first run, so two machines get the same checkout):
+
+```sh
+nix run --refresh github:KangaZero/odysseus-nix/v0.1.0
+nix develop github:KangaZero/odysseus-nix/v0.1.0
+```
+
+(`--refresh` is only needed the first time after a new commit lands on the branch — it bypasses Nix's flake tarball-ttl cache. Override the baked rev at runtime with `ODYSSEUS_REV=<sha>`.)
+
 Best practice is to consume this flake as an input from your own flake (next section) so the rev is captured in your `flake.lock`.
 
 ### 2. Add as an input to your own flake
