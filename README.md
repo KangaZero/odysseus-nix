@@ -13,30 +13,44 @@ Works on:
 
 You need [Nix](https://nixos.org/download) with flakes enabled. (The [Determinate Nix installer](https://determinate.systems/nix) turns flakes on by default. Upstream installs: add `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.)
 
-**Run Odysseus directly — no clone of this repo needed:**
+**Run Odysseus with one command — no clones required:**
 
 ```sh
-git clone https://github.com/pewdiepie-archdaemon/odysseus.git
-cd odysseus
 nix run github:KangaZero/odysseus-nix
-# → bootstraps a venv, pip-installs requirements, and starts uvicorn on :7000
 ```
 
-Or pass the checkout path explicitly:
+What this does:
+
+1. Clones [odysseus](https://github.com/pewdiepie-archdaemon/odysseus) into `${XDG_CACHE_HOME:-~/.cache}/odysseus-nix/odysseus` (one-time, shallow).
+2. Creates `.venv/` in that checkout and `pip install`s `requirements.txt`.
+3. Starts `uvicorn app:app --reload` on `:7000`.
+
+Subsequent runs reuse the cache; `pip install` is skipped unless `requirements.txt` changed.
+
+**Use an existing checkout** — pass a path, set `ODYSSEUS_DIR`, or just `cd` into one:
 
 ```sh
 nix run github:KangaZero/odysseus-nix -- /path/to/odysseus
+ODYSSEUS_DIR=/path/to/odysseus nix run github:KangaZero/odysseus-nix
+cd /path/to/odysseus && nix run github:KangaZero/odysseus-nix
+```
+
+**Use a fork** — override the clone URL:
+
+```sh
+ODYSSEUS_REPO_URL=https://github.com/you/odysseus-fork.git \
+  nix run github:KangaZero/odysseus-nix
 ```
 
 **For an interactive dev shell** (with `just`, auto-installed deps, etc.):
 
 ```sh
 git clone https://github.com/KangaZero/odysseus-nix.git
-git clone https://github.com/pewdiepie-archdaemon/odysseus.git
 cd odysseus-nix
 nix develop
-# auto-cds into ../odysseus, sets up venv, installs deps
 ```
+
+The dev shell looks for a sibling `../odysseus` checkout. Point at any path with `ODYSSEUS_DIR=/path/to/odysseus nix develop`.
 
 Then either `uvicorn app:app --reload` or `just dev`.
 
@@ -131,15 +145,17 @@ When you enter `nix develop` from this repo:
 4. Runs `pip install -r requirements.txt` and `npm install` — but only when those manifests change (mtime-marker check, so re-entering is a no-op).
 5. Exports `JUST_JUSTFILE` so `just <recipe>` works from anywhere in the shell.
 
-Env knobs:
+Env knobs (apply to both `nix run` and `nix develop` unless noted):
 
 | Variable | Default | Effect |
 |---|---|---|
-| `ODYSSEUS_DIR` | `../odysseus` | Path to the odysseus checkout. |
-| `ODYSSEUS_AUTO_INSTALL` | `1` | Set to `0` to skip auto-`pip install`/`npm install`. |
-| `ODYSSEUS_INSTALL_OPTIONAL` | `0` | Set to `1` to also install `requirements-optional.txt` (DuckDuckGo search, PyMuPDF form-filling). |
+| `ODYSSEUS_DIR` | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout. |
+| `ODYSSEUS_REPO_URL` | `https://github.com/pewdiepie-archdaemon/odysseus.git` | Clone URL used by `nix run` when no checkout is found (point at a fork). |
+| `ODYSSEUS_AUTO_INSTALL` | `1` | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`. |
+| `ODYSSEUS_INSTALL_OPTIONAL` | `0` | Dev shell only. Set to `1` to also install `requirements-optional.txt` (DuckDuckGo search, PyMuPDF form-filling). |
 | `APP_PORT` | `7000` | Port for `just run` / `nix run`. |
 | `VENV_DIR` | `$ODYSSEUS_DIR/.venv` | Path to the Python venv. |
+| `XDG_CACHE_HOME` | `~/.cache` | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`). |
 
 ## Just recipes
 

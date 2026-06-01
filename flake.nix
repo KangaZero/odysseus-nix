@@ -76,27 +76,42 @@
             paths = allDeps;
           };
 
-          # Standalone launcher for `nix run`. Bootstraps a venv on a checkout
-          # (path arg, $ODYSSEUS_DIR, or $PWD), installs requirements.txt, and
-          # exec's uvicorn. Used by apps.default below.
+          # Standalone launcher for `nix run`. Resolves a checkout (from
+          # $1, $ODYSSEUS_DIR, $PWD, or an auto-managed cache clone),
+          # bootstraps a venv, installs requirements.txt, and exec's uvicorn.
+          # Used by apps.default below.
           odysseusDev = pkgs.writeShellApplication {
             name = "odysseus-dev";
             runtimeInputs = allDeps;
             # Pip drives its own subprocesses; let the shellcheck through.
             checkPhase = "";
             text = ''
-              target="''${1:-''${ODYSSEUS_DIR:-$PWD}}"
+              # Where to look for / clone the odysseus checkout. Override
+              # the clone URL with $ODYSSEUS_REPO_URL (e.g. point at a fork).
+              repo_url="''${ODYSSEUS_REPO_URL:-https://github.com/pewdiepie-archdaemon/odysseus.git}"
+              cache_root="''${XDG_CACHE_HOME:-$HOME/.cache}/odysseus-nix"
+              cache_dir="$cache_root/odysseus"
+
+              # Resolve target in order: explicit arg → $ODYSSEUS_DIR → $PWD
+              # (if it looks like a checkout) → managed cache clone.
+              target="''${1:-''${ODYSSEUS_DIR:-}}"
+              if [ -z "$target" ]; then
+                if [ -f "$PWD/app.py" ] && [ -f "$PWD/requirements.txt" ]; then
+                  target="$PWD"
+                else
+                  target="$cache_dir"
+                  if [ ! -d "$target" ]; then
+                    echo "no odysseus checkout found — cloning into $target"
+                    echo "(override with: ODYSSEUS_DIR=/path/to/odysseus, or pass as arg)"
+                    mkdir -p "$cache_root"
+                    git clone --depth 1 "$repo_url" "$target"
+                  fi
+                fi
+              fi
+
               if [ ! -f "$target/app.py" ] || [ ! -f "$target/requirements.txt" ]; then
                 echo "error: $target does not look like an odysseus checkout" >&2
                 echo "       (expected app.py and requirements.txt)" >&2
-                echo "" >&2
-                echo "usage:" >&2
-                echo "  nix run github:KangaZero/odysseus-nix -- /path/to/odysseus" >&2
-                echo "  ODYSSEUS_DIR=/path/to/odysseus nix run github:KangaZero/odysseus-nix" >&2
-                echo "" >&2
-                echo "or clone first:" >&2
-                echo "  git clone https://github.com/pewdiepie-archdaemon/odysseus.git" >&2
-                echo "  cd odysseus && nix run github:KangaZero/odysseus-nix" >&2
                 exit 1
               fi
 
