@@ -7,9 +7,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Required-status-check name for branch protection: "test (ubuntu-latest)"
-# and "test (macos-latest)". Mark them required in repo settings to block
-# merges/pushes that don't pass.
+# Required-status-check names for branch protection (one per Nix system):
+#   "test (ubuntu-latest)"    → x86_64-linux
+#   "test (ubuntu-24.04-arm)" → aarch64-linux
+#   "test (macos-13)"         → x86_64-darwin
+#   "test (macos-latest)"     → aarch64-darwin
+# Mark them required in repo settings to block merges/pushes that don't pass.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -19,13 +22,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # One runner per Nix system, so each of the flake's four supported
+        # systems is built and tested natively (no cross-compilation):
+        #   ubuntu-latest    → x86_64-linux
+        #   ubuntu-24.04-arm → aarch64-linux
+        #   macos-13         → x86_64-darwin (Intel)
+        #   macos-latest     → aarch64-darwin (Apple Silicon)
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-13, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Show host system
+        run: nix eval --impure --raw --expr builtins.currentSystem
 
       - name: just test (fmt-check + lint + check + build)
         run: nix develop --command just test
