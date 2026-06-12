@@ -106,6 +106,14 @@ docker-down:
 docker-logs:
     cd "{{odysseus_dir}}" && docker compose logs -f
 
+# Remove the venv, node_modules, and auto-install markers from the odysseus
+# checkout. The mtime markers (.requirements.installed etc.) live inside
+# .venv / node_modules, so deleting those dirs forces a clean re-install on
+# the next `nix develop` / `just install`.
+clean:
+    cd "{{odysseus_dir}}" && rm -rf .venv node_modules
+    @echo "✅ removed .venv and node_modules from {{odysseus_dir}}"
+
 # Print resolved paths and versions.
 info:
     @echo "odysseus_dir: {{odysseus_dir}}"

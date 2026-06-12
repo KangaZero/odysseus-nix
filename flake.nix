@@ -65,7 +65,11 @@
 
           # macOS: nothing extra required — the SDK frameworks are pulled in
           # automatically by stdenv on Darwin.
-          darwinDeps = pkgs.lib.optionals pkgs.stdenv.isDarwin [ ];
+          # Was: darwinDeps = pkgs.lib.optionals pkgs.stdenv.isDarwin [ ];
+          #   The isDarwin guard wrapped an empty list, so it evaluated to [ ]
+          #   on every platform — a dead condition. Reduced to a plain [ ],
+          #   kept as an explicit, named hook for future Darwin-only deps.
+          darwinDeps = [ ];
 
           allDeps = commonDeps ++ linuxDeps ++ darwinDeps;
 
@@ -94,8 +98,6 @@
           odysseusDev = pkgs.writeShellApplication {
             name = "odysseus-dev";
             runtimeInputs = allDeps;
-            # Pip drives its own subprocesses; let the shellcheck through.
-            checkPhase = "";
             text = ''
               # Where to look for / clone the odysseus checkout. Override
               # the clone URL with $ODYSSEUS_REPO_URL (e.g. point at a fork).
@@ -130,10 +132,11 @@
               mkdir -p data logs services/cache/search
 
               # Make pip-installed manylinux wheels (numpy etc.) find
-              # libstdc++/libz at runtime. No-op on Darwin (empty string).
-              if [ -n "${wheelLibPath}" ]; then
+              # libstdc++/libz at runtime. Emitted only on Linux; on Darwin the
+              # loader uses @rpath, so this is omitted entirely.
+              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
                 export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-              fi
+              ''}
 
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
               if [ ! -d "$VENV_DIR" ]; then
@@ -144,7 +147,7 @@
               source "$VENV_DIR/bin/activate"
 
               MARKER="$VENV_DIR/.requirements.installed"
-              if [ ! -f "$MARKER" ] || [ requirements.txt -nt "$MARKER" ]; then
+              if [ ! -f "$MARKER" ] || [ "$PWD/requirements.txt" -nt "$MARKER" ]; then
                 echo "installing python deps…"
                 pip install -r requirements.txt
                 touch "$MARKER"
@@ -195,10 +198,11 @@
               fi
 
               # Make pip-installed manylinux wheels (numpy etc.) find
-              # libstdc++/libz at runtime. No-op on Darwin.
-              if [ -n "${wheelLibPath}" ]; then
+              # libstdc++/libz at runtime. Emitted only on Linux; on Darwin the
+              # loader uses @rpath, so this is omitted entirely.
+              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
                 export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-              fi
+              ''}
 
               # One venv per project, kept out of the source tree.
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
