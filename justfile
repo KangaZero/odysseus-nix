@@ -27,10 +27,10 @@ test: fmt-check lint check build
     @echo ""
     @echo "✅ all checks passed"
 
-# Verify nix files are formatted (no writes). Run `just fmt` to fix.
+# Verify the tree is formatted (no writes). Run `just fmt` to fix.
 fmt-check:
-    @echo "→ nixpkgs-fmt --check"
-    cd "{{flake_dir}}" && nixpkgs-fmt --check flake.nix
+    @echo "→ treefmt --ci (nix/shell/md/yaml)"
+    cd "{{flake_dir}}" && nix fmt -- --ci
 
 # Lint nix files: statix (anti-patterns) + deadnix (dead bindings) +
 # shellcheck (hooks).
@@ -52,9 +52,9 @@ build:
     @echo "→ nix build .#default .#odysseus-dev"
     cd "{{flake_dir}}" && nix build .#default .#odysseus-dev --no-link --print-out-paths
 
-# Format nix files in-place.
+# Format the whole tree in-place (nix/shell/md/yaml) via treefmt.
 fmt:
-    cd "{{flake_dir}}" && nixpkgs-fmt flake.nix
+    cd "{{flake_dir}}" && nix fmt
 
 # Update flake.lock to the latest nixpkgs/flake-utils.
 lock-update:

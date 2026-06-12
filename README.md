@@ -60,7 +60,7 @@ Then either `uvicorn app:app --reload` or `just dev`.
 
 The Quickstart above. `nix run` is the one-shot "just start the server" path; `nix develop` is the interactive shell with the full toolchain on `$PATH`.
 
-Both forms resolve `main` by default. **`main` is rolling**: the launcher shallow-clones upstream odysseus's default branch (`dev`) with no rev pin, so it tracks upstream HEAD and `ODYSSEUS_REV` has *no effect here*. You can still pin the *flake itself* to a commit for reproducible tooling in scripts / CI (this pins the Nix env, not the odysseus checkout):
+Both forms resolve `main` by default. **`main` is rolling**: the launcher shallow-clones upstream odysseus's default branch (`dev`) with no rev pin, so it tracks upstream HEAD and `ODYSSEUS_REV` has _no effect here_. You can still pin the _flake itself_ to a commit for reproducible tooling in scripts / CI (this pins the Nix env, not the odysseus checkout):
 
 ```sh
 nix run github:KangaZero/odysseus-nix/<commit-sha>
@@ -156,15 +156,15 @@ When you enter `nix develop` from this repo:
 
 Env knobs (apply to both `nix run` and `nix develop` unless noted):
 
-| Variable | Default | Effect |
-|---|---|---|
-| `ODYSSEUS_DIR` | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout. |
-| `ODYSSEUS_REPO_URL` | `https://github.com/pewdiepie-archdaemon/odysseus.git` | Clone URL used by `nix run` when no checkout is found (point at a fork). |
-| `ODYSSEUS_AUTO_INSTALL` | `1` | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`. |
-| `ODYSSEUS_INSTALL_OPTIONAL` | `0` | Dev shell only. Set to `1` to also install `requirements-optional.txt` (DuckDuckGo search, PyMuPDF form-filling). |
-| `APP_PORT` | `7000` | Port for `just run` / `nix run`. |
-| `VENV_DIR` | `$ODYSSEUS_DIR/.venv` | Path to the Python venv. |
-| `XDG_CACHE_HOME` | `~/.cache` | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`). |
+| Variable                    | Default                                                                | Effect                                                                                                            |
+| --------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `ODYSSEUS_DIR`              | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                                                                    |
+| `ODYSSEUS_REPO_URL`         | `https://github.com/pewdiepie-archdaemon/odysseus.git`                 | Clone URL used by `nix run` when no checkout is found (point at a fork).                                          |
+| `ODYSSEUS_AUTO_INSTALL`     | `1`                                                                    | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`.                                              |
+| `ODYSSEUS_INSTALL_OPTIONAL` | `0`                                                                    | Dev shell only. Set to `1` to also install `requirements-optional.txt` (DuckDuckGo search, PyMuPDF form-filling). |
+| `APP_PORT`                  | `7000`                                                                 | Port for `just run` / `nix run`.                                                                                  |
+| `VENV_DIR`                  | `$ODYSSEUS_DIR/.venv`                                                  | Path to the Python venv.                                                                                          |
+| `XDG_CACHE_HOME`            | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).                                         |
 
 ## Just recipes
 
@@ -243,14 +243,14 @@ Python packages themselves are installed via `pip` into the venv, not Nix — ke
 
 ## Flake outputs
 
-| Output | What |
-|---|---|
-| `devShells.${system}.default` | Interactive dev shell (consumed by `nix develop`). |
-| `packages.${system}.default` | Alias for `odysseus-env`. |
-| `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced. |
+| Output                            | What                                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------------- |
+| `devShells.${system}.default`     | Interactive dev shell (consumed by `nix develop`).                                     |
+| `packages.${system}.default`      | Alias for `odysseus-env`.                                                              |
+| `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced.  |
 | `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. Recommended for home-manager. |
-| `apps.${system}.default` | Same launcher, exposed for `nix run`. |
-| `formatter.${system}` | `nixpkgs-fmt`. |
+| `apps.${system}.default`          | Same launcher, exposed for `nix run`.                                                  |
+| `formatter.${system}`             | `nixpkgs-fmt`.                                                                         |
 
 ## License
 

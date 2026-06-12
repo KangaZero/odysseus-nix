@@ -4,9 +4,13 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, treefmt-nix, ... }:
     flake-utils.lib.eachSystem [
       "x86_64-linux"
       "aarch64-linux"
@@ -16,6 +20,10 @@
       (system:
         let
           pkgs = import nixpkgs { inherit system; };
+
+          # Multi-formatter setup (nix/shell/md/yaml) — see ./treefmt.nix.
+          # Exposed as `nix fmt` and enforced by CI via the `formatting` check.
+          treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
 
           python = pkgs.python312;
 
@@ -269,7 +277,10 @@
             program = "${odysseusDev}/bin/odysseus-dev";
           };
 
-          # `nix fmt` formats this flake.
-          formatter = pkgs.nixpkgs-fmt;
+          # `nix fmt` runs treefmt across the whole tree (nix/shell/md/yaml).
+          formatter = treefmtEval.config.build.wrapper;
+
+          # `nix flake check` (and `just check`) enforce formatting in CI.
+          checks.formatting = treefmtEval.config.build.check self;
         });
 }
