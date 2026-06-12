@@ -60,18 +60,18 @@ Then either `uvicorn app:app --reload` or `just dev`.
 
 The Quickstart above. `nix run` is the one-shot "just start the server" path; `nix develop` is the interactive shell with the full toolchain on `$PATH`.
 
-Both forms always resolve `main` by default. To pin to a specific commit (recommended for reproducibility in scripts / CI):
+Both forms resolve `main` by default. **`main` is rolling**: the launcher shallow-clones upstream odysseus's default branch (`dev`) with no rev pin, so it tracks upstream HEAD and `ODYSSEUS_REV` has *no effect here*. You can still pin the *flake itself* to a commit for reproducible tooling in scripts / CI (this pins the Nix env, not the odysseus checkout):
 
 ```sh
 nix run github:KangaZero/odysseus-nix/<commit-sha>
 nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
-You can also target a release branch — `v0.1.0` bakes in an upstream odysseus rev (the managed cache clone auto-syncs to it on first run, so two machines get the same checkout):
+For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
 
 ```sh
-nix run --refresh github:KangaZero/odysseus-nix/v0.1.0
-nix develop github:KangaZero/odysseus-nix/v0.1.0
+nix run --refresh github:KangaZero/odysseus-nix/v0.2.0
+nix develop github:KangaZero/odysseus-nix/v0.2.0
 ```
 
 (`--refresh` is only needed the first time after a new commit lands on the branch — it bypasses Nix's flake tarball-ttl cache. Override the baked rev at runtime with `ODYSSEUS_REV=<sha>`.)
