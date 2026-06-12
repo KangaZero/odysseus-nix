@@ -42,10 +42,17 @@ lint:
     @echo "→ shellcheck .githooks/pre-push"
     cd "{{flake_dir}}" && shellcheck .githooks/pre-push
 
-# Validate the flake outputs across all systems (no remote build).
+# Validate the flake. Two passes: (1) native `nix flake check` builds and runs
+# this platform's checks (incl. the treefmt `formatting` check) + packages;
+# (2) `--all-systems --no-build` evaluates every system's outputs to catch eval
+# errors WITHOUT trying to build foreign-platform derivations (which fails on a
+# CI runner that can't cross-build — e.g. an x86_64 box building an aarch64
+# check). The build pass is intentionally native-only.
 check:
-    @echo "→ nix flake check --all-systems"
-    cd "{{flake_dir}}" && nix flake check --all-systems
+    @echo "→ nix flake check (native: build + run checks)"
+    cd "{{flake_dir}}" && nix flake check
+    @echo "→ nix flake check --all-systems --no-build (eval every system)"
+    cd "{{flake_dir}}" && nix flake check --all-systems --no-build
 
 # Build every exposed package for the current system.
 build:
