@@ -15,10 +15,10 @@ The shell auto-cds into `$ODYSSEUS_DIR` (default `../odysseus`) on entry.
 
 ## Key files
 
-| File | Purpose |
-|------|---------|
+| File        | Purpose                                                  |
+| ----------- | -------------------------------------------------------- |
 | `flake.nix` | The whole flake — devShell, packages, `nix run` launcher |
-| `justfile` | Dev task recipes (`just dev`, `just test`, etc.) |
+| `justfile`  | Dev task recipes (`just dev`, `just test`, etc.)         |
 
 ## Invariants to preserve
 
