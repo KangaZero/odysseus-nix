@@ -10,7 +10,7 @@ on:
 # Required-status-check names for branch protection (one per Nix system):
 #   "test (ubuntu-latest)"    → x86_64-linux
 #   "test (ubuntu-24.04-arm)" → aarch64-linux
-#   "test (macos-13)"         → x86_64-darwin
+#   "test (macos-13)"         → x86_64-darwin //Temporarily commenting this out, as it does not seem to be retrievable
 #   "test (macos-latest)"     → aarch64-darwin
 # Mark them required in repo settings to block merges/pushes that don't pass.
 concurrency:
@@ -26,9 +26,9 @@ jobs:
         # systems is built and tested natively (no cross-compilation):
         #   ubuntu-latest    → x86_64-linux
         #   ubuntu-24.04-arm → aarch64-linux
-        #   macos-13         → x86_64-darwin (Intel)
+        #   macos-13         → x86_64-darwin (Intel) //Removed out temporarily, might need to try a different version
         #   macos-latest     → aarch64-darwin (Apple Silicon)
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-13, macos-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
