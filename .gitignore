@@ -3,5 +3,6 @@
 result
 result-*
 
-# Local Claude Code settings
-.claude/
+# Local Claude Code settings (keep commands tracked)
+.claude/settings.local.json
+.claude/settings.json
