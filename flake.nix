@@ -1,5 +1,5 @@
 {
-  description = "Odysseus dev shell — Python 3.12 + Node + system deps for local development";
+  description = "Odysseus dev shell — Python 3.14 + Node + system deps for local development";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
