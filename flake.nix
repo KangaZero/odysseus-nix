@@ -25,7 +25,16 @@
           # Exposed as `nix fmt` and enforced by CI via the `formatting` check.
           treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
 
-          python = pkgs.python312;
+          python = pkgs.python314;
+
+          # opencv-python (cv2) runtime shared libs, mirroring the Dockerfile's
+          # apt `libgl1` / `libglib2.0-0t64` / `libxcb1`. Pulled in by the
+          # optional Real-ESRGAN cookbook path; cv2 dlopens libGL.so.1 /
+          # libgthread-2.0.so.0 / libxcb.so.1 at import. Linux-only — Darwin
+          # opencv wheels link system frameworks instead. Shared between the
+          # dep closure (linuxDeps) and the runtime dlopen path (wheelLibPath)
+          # so both track the Dockerfile from one edit point.
+          opencvLibs = with pkgs; [ libGL glib libxcb ];
 
           # System-level deps mirroring the Dockerfile so `pip install -r
           # requirements.txt` can build native wheels (numpy, cryptography,
@@ -69,7 +78,7 @@
           linuxDeps = pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [
             gosu
             glibcLocales
-          ]);
+          ] ++ opencvLibs);
 
           # macOS: nothing extra required — the SDK frameworks are pulled in
           # automatically by stdenv on Darwin.
@@ -87,10 +96,10 @@
           # without an explicit LD_LIBRARY_PATH. Linux-only; on Darwin the
           # loader uses @rpath and this var is ignored.
           wheelLibPath = pkgs.lib.optionalString pkgs.stdenv.isLinux
-            (pkgs.lib.makeLibraryPath [
+            (pkgs.lib.makeLibraryPath ([
               pkgs.stdenv.cc.cc.lib
               pkgs.zlib
-            ]);
+            ] ++ opencvLibs));
 
           # Aggregated environment so home-manager / `nix profile install`
           # users can pull in all the tooling with a single package.
