@@ -27,6 +27,11 @@
 
           python = pkgs.python314;
 
+          # Pinned upstream odysseus revision shipped with this flake tag.
+          # Bump this (and the flake's own git tag) when cutting a new release.
+          # Users can still override at runtime via ODYSSEUS_REV=<sha>.
+          odysseusRev = "de12d4734a1705a4f309cb1df7ee0c095b8abef0";
+
           # opencv-python (cv2) runtime shared libs, mirroring the Dockerfile's
           # apt `libgl1` / `libglib2.0-0t64` / `libxcb1`. Pulled in by the
           # optional Real-ESRGAN cookbook path; cv2 dlopens libGL.so.1 /
@@ -121,20 +126,49 @@
               repo_url="''${ODYSSEUS_REPO_URL:-https://github.com/pewdiepie-archdaemon/odysseus.git}"
               cache_root="''${XDG_CACHE_HOME:-$HOME/.cache}/odysseus-nix"
               cache_dir="$cache_root/odysseus"
+              # Pinned upstream rev baked in at flake-eval time. Override
+              # via ODYSSEUS_REV=<sha> (must be a full SHA — branches/tags
+              # need a SHA resolve and aren't supported here).
+              pinned_rev="''${ODYSSEUS_REV:-${odysseusRev}}"
 
               # Resolve target in order: explicit arg → $ODYSSEUS_DIR → $PWD
               # (if it looks like a checkout) → managed cache clone.
               target="''${1:-''${ODYSSEUS_DIR:-}}"
+              user_managed=0
               if [ -z "$target" ]; then
                 if [ -f "$PWD/app.py" ] && [ -f "$PWD/requirements.txt" ]; then
                   target="$PWD"
+                  user_managed=1
                 else
                   target="$cache_dir"
-                  if [ ! -d "$target" ]; then
-                    echo "no odysseus checkout found — cloning into $target"
-                    echo "(override with: ODYSSEUS_DIR=/path/to/odysseus, or pass as arg)"
-                    mkdir -p "$cache_root"
-                    git clone --depth 1 "$repo_url" "$target"
+                fi
+              else
+                user_managed=1
+              fi
+
+              # Only sync the managed cache clone to the pinned rev. User-
+              # supplied checkouts ($ODYSSEUS_DIR, $PWD, arg) are left alone
+              # so local work-in-progress isn't clobbered.
+              if [ "$user_managed" = "0" ]; then
+                if [ ! -d "$target/.git" ]; then
+                  echo "cloning odysseus into $target (pinned $pinned_rev)"
+                  echo "(override location: ODYSSEUS_DIR=/path/to/odysseus)"
+                  echo "(override rev:      ODYSSEUS_REV=<sha>)"
+                  mkdir -p "$cache_root"
+                  rm -rf "$target"
+                  git init -q "$target"
+                  git -C "$target" remote add origin "$repo_url"
+                  git -C "$target" fetch --depth 1 origin "$pinned_rev"
+                  git -C "$target" checkout --detach FETCH_HEAD
+                elif [ "''${ODYSSEUS_NO_SYNC:-0}" != "1" ]; then
+                  current_rev="$(git -C "$target" rev-parse --verify HEAD 2>/dev/null || true)"
+                  if [ "$current_rev" != "$pinned_rev" ]; then
+                    echo "syncing odysseus checkout ''${current_rev:-<empty>} → $pinned_rev"
+                    git -C "$target" fetch --depth 1 origin "$pinned_rev"
+                    git -C "$target" checkout --detach "$pinned_rev"
+                    # requirements.txt may have changed between revs — force a
+                    # re-check by invalidating the install marker.
+                    rm -f "$target/.venv/.requirements.installed"
                   fi
                 fi
               fi
