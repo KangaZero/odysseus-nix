@@ -7,12 +7,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Required-status-check names for branch protection (one per Nix system):
+# Required-status-check names for branch protection (one per matrix leg):
 #   "test (ubuntu-latest)"    → x86_64-linux
 #   "test (ubuntu-24.04-arm)" → aarch64-linux
-#   "test (macos-13)"         → x86_64-darwin //Temporarily commenting this out, as it does not seem to be retrievable
 #   "test (macos-latest)"     → aarch64-darwin
 # Mark them required in repo settings to block merges/pushes that don't pass.
+# NOTE: x86_64-darwin (macos-13) is intentionally NOT in the matrix below — the
+# runner was not retrievable on this repo — so it must NOT be marked required
+# (a required check that never runs would block every merge). The flake still
+# declares x86_64-darwin; re-add the `macos-13` leg to restore that coverage.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -22,12 +25,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One runner per Nix system, so each of the flake's four supported
-        # systems is built and tested natively (no cross-compilation):
+        # One runner per Nix system in the matrix, each built and tested
+        # natively (no cross-compilation):
         #   ubuntu-latest    → x86_64-linux
         #   ubuntu-24.04-arm → aarch64-linux
-        #   macos-13         → x86_64-darwin (Intel) //Removed out temporarily, might need to try a different version
         #   macos-latest     → aarch64-darwin (Apple Silicon)
+        # x86_64-darwin (macos-13, Intel) is omitted — the runner was not
+        # retrievable here; re-add `macos-13` to restore Intel-mac coverage.
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
