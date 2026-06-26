@@ -1,6 +1,6 @@
 # odysseus-nix
 
-A Nix flake providing a reproducible dev environment for [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) — Python 3.12, Node.js (LTS), and every system-level dep needed to build the native Python wheels.
+A Nix flake providing a reproducible dev environment for [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) — Python 3.14, Node.js (LTS), and every system-level dep needed to build the native Python wheels.
 
 Works on:
 
@@ -67,11 +67,11 @@ nix run github:KangaZero/odysseus-nix/<commit-sha>
 nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
-For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
+For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
 
 ```sh
-nix run --refresh github:KangaZero/odysseus-nix/v0.2.0
-nix develop github:KangaZero/odysseus-nix/v0.2.0
+nix run --refresh github:KangaZero/odysseus-nix/v0.3.0
+nix develop github:KangaZero/odysseus-nix/v0.3.0
 ```
 
 (`--refresh` is only needed the first time after a new commit lands on the branch — it bypasses Nix's flake tarball-ttl cache. Override the baked rev at runtime with `ODYSSEUS_REV=<sha>`.)
@@ -142,7 +142,7 @@ Best practice is to consume this flake as an input from your own flake (next sec
 
 After `home-manager switch`, `odysseus-dev [path-to-checkout]` works from any shell.
 
-**Alternative:** if you actually want every tool (Python 3.12, Node, just, cmake, statix, …) surfaced at the user level — not just the launcher — swap `odysseus-dev` for `odysseus-env` above. ⚠️ Heads-up: `odysseus-env` is a `buildEnv` aggregating ~20 packages, so it'll collide with anything you have in `home.packages` that ships the same binary (commonly `just`, `nodejs`, `curl`, `git`, `cmake`). Remove those from your `home.packages` first, or stick with `odysseus-dev` and use `nix develop github:KangaZero/odysseus-nix` for the full toolchain on demand.
+**Alternative:** if you actually want every tool (Python 3.14, Node, just, cmake, statix, …) surfaced at the user level — not just the launcher — swap `odysseus-dev` for `odysseus-env` above. ⚠️ Heads-up: `odysseus-env` is a `buildEnv` aggregating ~20 packages, so it'll collide with anything you have in `home.packages` that ships the same binary (commonly `just`, `nodejs`, `curl`, `git`, `cmake`). Remove those from your `home.packages` first, or stick with `odysseus-dev` and use `nix develop github:KangaZero/odysseus-nix` for the full toolchain on demand.
 
 ## What the dev shell does
 
@@ -176,7 +176,7 @@ After `nix develop`, run `just` (from anywhere — `JUST_JUSTFILE` is exported):
 just test            # fmt-check + lint + check + build — the one CI runs
 just fmt-check       # nixpkgs-fmt --check (verify formatting)
 just lint            # statix + deadnix + shellcheck
-just check           # nix flake check --all-systems
+just check           # native flake check + all-systems eval (no cross-build)
 just build           # nix build .#default .#odysseus-dev
 just fmt             # nixpkgs-fmt (auto-fix)
 just install-hooks   # wire up the .githooks/pre-push hook
@@ -201,12 +201,14 @@ just info             # print resolved paths + versions
 
 ## CI & git pre-push hook
 
-`.github/workflows/ci.yml` runs `just test` on every push and PR on both `ubuntu-latest` and `macos-latest` via the [Determinate Systems nix-installer](https://github.com/DeterminateSystems/nix-installer-action). No external cache service required — runs are 2-5 min cold; add Cachix or FlakeHub later if you need it faster.
+`.github/workflows/ci.yml` runs `just test` on every push and PR across a matrix of native runners — `ubuntu-latest` (x86_64-linux), `ubuntu-24.04-arm` (aarch64-linux), and `macos-latest` (aarch64-darwin) — via the [Determinate Systems nix-installer](https://github.com/DeterminateSystems/nix-installer-action). No external cache service required — runs are 2-5 min cold; add Cachix or FlakeHub later if you need it faster.
+
+> The flake also supports `x86_64-darwin` (Intel Mac), but it is **not** in the CI matrix — the `macos-13` runner was not retrievable on this repo, and nixpkgs is sunsetting `x86_64-darwin` in 26.05. Re-add the `macos-13` leg to restore that build coverage.
 
 To require those checks before merging, enable branch protection on `main` in repo settings → Branches → Add rule:
 
 - "Require status checks to pass before merging"
-- Add `test (ubuntu-latest)` and `test (macos-latest)` as required checks.
+- Add `test (ubuntu-latest)`, `test (ubuntu-24.04-arm)`, and `test (macos-latest)` as required checks.
 
 To also block local pushes that don't pass, install the pre-push hook once per clone:
 
@@ -231,13 +233,14 @@ The shell now auto-loads whenever you `cd` in.
 
 System-level deps mirror the project Dockerfile so native Python wheels build cleanly on every supported arch:
 
-- Python 3.12 + pip + virtualenv
+- Python 3.14 + pip + virtualenv
 - Node.js (default LTS from the consuming nixpkgs — currently 22/24 on `nixos-unstable`)
 - just (task runner)
 - git, cmake, curl, tmux, openssh, pkg-config
 - nixpkgs-fmt, statix, deadnix, shellcheck (used by `just test`)
 - zlib, openssl, libffi, libxml2/xslt (wheel build headers)
 - gosu (Linux only — used by the Docker entrypoint)
+- libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the Real-ESRGAN path)
 
 Python packages themselves are installed via `pip` into the venv, not Nix — keeps the flake small and avoids fighting nixpkgs over PyPI versions like `chromadb-client` and `fastembed`.
 
