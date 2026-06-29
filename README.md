@@ -67,11 +67,11 @@ nix run github:KangaZero/odysseus-nix/<commit-sha>
 nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
-For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.4.0`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
+For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
 
 ```sh
-nix run --refresh github:KangaZero/odysseus-nix/v0.4.0
-nix develop github:KangaZero/odysseus-nix/v0.4.0
+nix run --refresh github:KangaZero/odysseus-nix/v0.3.1
+nix develop github:KangaZero/odysseus-nix/v0.3.1
 ```
 
 (`--refresh` is only needed the first time after a new commit lands on the branch — it bypasses Nix's flake tarball-ttl cache. Override the baked rev at runtime with `ODYSSEUS_REV=<sha>`.)
