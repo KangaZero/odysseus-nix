@@ -156,6 +156,10 @@
               ''}
 
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
+              if [ -d "$VENV_DIR" ] && ! "$VENV_DIR/bin/python" --version > /dev/null 2>&1; then
+                echo "stale venv detected (Python interpreter changed) — recreating"
+                rm -rf "$VENV_DIR"
+              fi
               if [ ! -d "$VENV_DIR" ]; then
                 echo "creating venv at $VENV_DIR"
                 ${python.interpreter} -m venv "$VENV_DIR"
@@ -223,6 +227,10 @@
 
               # One venv per project, kept out of the source tree.
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
+              if [ -d "$VENV_DIR" ] && ! "$VENV_DIR/bin/python" --version > /dev/null 2>&1; then
+                echo "stale venv detected (Python interpreter changed) — recreating"
+                rm -rf "$VENV_DIR"
+              fi
               if [ ! -d "$VENV_DIR" ]; then
                 echo "creating venv at $VENV_DIR"
                 ${python.interpreter} -m venv "$VENV_DIR"
@@ -284,6 +292,9 @@
           apps.default = {
             type = "app";
             program = "${odysseusDev}/bin/odysseus-dev";
+            meta = {
+              description = "Launch the Odysseus FastAPI app from a local or auto-cloned checkout";
+            };
           };
 
           # `nix fmt` runs treefmt across the whole tree (nix/shell/md/yaml).
