@@ -30,7 +30,7 @@
           # Pinned upstream odysseus revision shipped with this flake tag.
           # Bump this (and the flake's own git tag) when cutting a new release.
           # Users can still override at runtime via ODYSSEUS_REV=<sha>.
-          odysseusRev = "de12d4734a1705a4f309cb1df7ee0c095b8abef0";
+          odysseusRev = "893e490cdccf8a2a16a5fd3241ca9facfe2a3968";
 
           # opencv-python (cv2) runtime shared libs, mirroring the Dockerfile's
           # apt `libgl1` / `libglib2.0-0t64` / `libxcb1`. Pulled in by the
