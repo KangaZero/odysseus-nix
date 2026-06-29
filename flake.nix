@@ -27,6 +27,12 @@
 
           python = pkgs.python314;
 
+          maintainer = {
+            name = "KangaZero";
+            github = "KangaZero";
+            email = "samuelyongw@gmail.com";
+          };
+
           # opencv-python (cv2) runtime shared libs, mirroring the Dockerfile's
           # apt `libgl1` / `libglib2.0-0t64` / `libxcb1`. Pulled in by the
           # optional Real-ESRGAN cookbook path; cv2 dlopens libGL.so.1 /
@@ -103,16 +109,22 @@
 
           # Aggregated environment so home-manager / `nix profile install`
           # users can pull in all the tooling with a single package.
-          odysseusEnv = pkgs.buildEnv {
+          odysseusEnv = (pkgs.buildEnv {
             name = "odysseus-env";
             paths = allDeps;
-          };
+          }).overrideAttrs (_: {
+            meta = {
+              description = "Odysseus dev environment — Python 3.14 + Node LTS + system deps";
+              homepage = "https://github.com/KangaZero/odysseus-nix";
+              maintainers = [ maintainer ];
+            };
+          });
 
           # Standalone launcher for `nix run`. Resolves a checkout (from
           # $1, $ODYSSEUS_DIR, $PWD, or an auto-managed cache clone),
           # bootstraps a venv, installs requirements.txt, and exec's uvicorn.
           # Used by apps.default below.
-          odysseusDev = pkgs.writeShellApplication {
+          odysseusDev = (pkgs.writeShellApplication {
             name = "odysseus-dev";
             runtimeInputs = allDeps;
             text = ''
@@ -176,7 +188,13 @@
 
               exec uvicorn app:app --reload --host 0.0.0.0 --port "''${APP_PORT:-7000}"
             '';
-          };
+          }).overrideAttrs (_: {
+            meta = {
+              description = "Launch the Odysseus FastAPI app from a local or auto-cloned checkout";
+              homepage = "https://github.com/KangaZero/odysseus-nix";
+              maintainers = [ maintainer ];
+            };
+          });
         in
         {
           devShells.default = pkgs.mkShell {
@@ -294,6 +312,8 @@
             program = "${odysseusDev}/bin/odysseus-dev";
             meta = {
               description = "Launch the Odysseus FastAPI app from a local or auto-cloned checkout";
+              homepage = "https://github.com/KangaZero/odysseus-nix";
+              maintainers = [ maintainer ];
             };
           };
 
