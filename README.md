@@ -227,7 +227,7 @@ cd odysseus-nix
 direnv allow
 ```
 
-The shell now auto-loads whenever you `cd` in. The `.envrc` also includes `nix_direnv_watch_file flake.lock`, so direnv automatically re-enters the shell after `nix flake update` — no manual `direnv reload` needed.
+The shell now auto-loads whenever you `cd` in. The `.envrc` also includes `watch_file flake.lock`, so direnv automatically re-enters the shell after `nix flake update` — no manual `direnv reload` needed.
 
 ## What's bundled
 
