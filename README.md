@@ -156,15 +156,15 @@ When you enter `nix develop` from this repo:
 
 Env knobs (apply to both `nix run` and `nix develop` unless noted):
 
-| Variable                    | Default                                                                | Effect                                                                                                            |
-| --------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `ODYSSEUS_DIR`              | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                                                                    |
-| `ODYSSEUS_REPO_URL`         | `https://github.com/pewdiepie-archdaemon/odysseus.git`                 | Clone URL used by `nix run` when no checkout is found (point at a fork).                                          |
-| `ODYSSEUS_AUTO_INSTALL`     | `1`                                                                    | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`.                                              |
-| `ODYSSEUS_INSTALL_OPTIONAL` | `0`                                                                    | Dev shell only. Set to `1` to also install `requirements-optional.txt` (DuckDuckGo search, PyMuPDF form-filling). |
-| `APP_PORT`                  | `7000`                                                                 | Port for `just run` / `nix run`.                                                                                  |
-| `VENV_DIR`                  | `$ODYSSEUS_DIR/.venv`                                                  | Path to the Python venv.                                                                                          |
-| `XDG_CACHE_HOME`            | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).                                         |
+| Variable                    | Default                                                                | Effect                                                                     |
+| --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `ODYSSEUS_DIR`              | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                             |
+| `ODYSSEUS_REPO_URL`         | `https://github.com/pewdiepie-archdaemon/odysseus.git`                 | Clone URL used by `nix run` when no checkout is found (point at a fork).   |
+| `ODYSSEUS_AUTO_INSTALL`     | `1`                                                                    | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`.       |
+| `ODYSSEUS_INSTALL_OPTIONAL` | `1`                                                                    | Dev shell only. Set to `0` to skip installing `requirements-optional.txt`. |
+| `APP_PORT`                  | `7000`                                                                 | Port for `just run` / `nix run`.                                           |
+| `VENV_DIR`                  | `$ODYSSEUS_DIR/.venv`                                                  | Path to the Python venv.                                                   |
+| `XDG_CACHE_HOME`            | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).  |
 
 ## Just recipes
 
@@ -198,6 +198,40 @@ just docker-down      # docker compose down
 just docker-logs      # docker compose logs -f
 just info             # print resolved paths + versions
 ```
+
+## Optional services
+
+These features require a one-time setup step beyond `nix develop`.
+
+### ChromaDB (vector RAG + semantic memory)
+
+ChromaDB powers vector search, semantic memory, and tool selection. The app connects to `localhost:8100` by default and retries lazily if it's not running.
+
+**With Docker** (recommended for production-like setups):
+
+```sh
+just docker-up    # starts the full stack including ChromaDB
+```
+
+**Without Docker** (lightweight, foreground process):
+
+Requires the full `chromadb` package instead of the lightweight `chromadb-client` already in `requirements.txt`. They conflict at the module level, so swap them:
+
+```sh
+pip uninstall chromadb-client
+pip install chromadb
+just chromadb     # runs ChromaDB server on localhost:8100
+```
+
+### Playwright MCP
+
+The built-in Playwright MCP server lets Odysseus control a browser. Playwright itself is bundled by the Nix shell; just seed the `npx` cache once:
+
+```sh
+just playwright-mcp   # downloads @playwright/mcp into the npx cache
+```
+
+Then restart the app (`just run`). The `PLAYWRIGHT_BROWSERS_PATH` env var is exported by the shell so no separate browser download is needed.
 
 ## CI & git pre-push hook
 
@@ -241,6 +275,12 @@ System-level deps mirror the project Dockerfile so native Python wheels build cl
 - zlib, openssl, libffi, libxml2/xslt (wheel build headers), file/libmagic (python-magic runtime)
 - gosu (Linux only — used by the Docker entrypoint)
 - libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the Real-ESRGAN path)
+- playwright (Playwright browser automation — used by the `@playwright/mcp` MCP server)
+
+**Optional Python deps** (auto-installed when `ODYSSEUS_INSTALL_OPTIONAL=1`, which is the default):
+
+- python-magic — content-based MIME sniffing for uploads (falls back to extension detection without it; system `libmagic` is bundled)
+- faster-whisper, ddgs, PyMuPDF, markitdown — see `requirements-optional.txt` for details
 
 Python packages themselves are installed via `pip` into the venv, not Nix — keeps the flake small and avoids fighting nixpkgs over PyPI versions like `chromadb-client` and `fastembed`.
 

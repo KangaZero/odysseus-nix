@@ -245,6 +245,11 @@
                 export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
               ''}
 
+              # Point Playwright (and @playwright/mcp) at the Nix-managed browser
+              # store so no runtime browser downloads are needed.
+              export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
+              export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD="1"
+
               # One venv per project, kept out of the source tree.
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
               if [ -d "$VENV_DIR" ] && ! "$VENV_DIR/bin/python" --version > /dev/null 2>&1; then
@@ -271,7 +276,7 @@
 
                 REQS_OPT="$PWD/requirements-optional.txt"
                 REQS_OPT_MARKER="$VENV_DIR/.requirements-optional.installed"
-                if [ "''${ODYSSEUS_INSTALL_OPTIONAL:-0}" = "1" ] && [ -f "$REQS_OPT" ] \
+                if [ "''${ODYSSEUS_INSTALL_OPTIONAL:-1}" = "1" ] && [ -f "$REQS_OPT" ] \
                   && { [ ! -f "$REQS_OPT_MARKER" ] || [ "$REQS_OPT" -nt "$REQS_OPT_MARKER" ]; }; then
                   echo "installing optional python deps (requirements-optional.txt changed)…"
                   pip install -r "$REQS_OPT" && touch "$REQS_OPT_MARKER"

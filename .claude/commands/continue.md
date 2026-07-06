@@ -1,4 +1,5 @@
 # /continue — upstream sync pass
+
 Use after `/slave-on` (which restores session context). This command pulls upstream, reconciles deps, smoke-tests the shell, and surfaces improvements. Work through steps in order:
 
 ## 1 — Pull latest odysseus

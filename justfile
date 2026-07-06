@@ -128,3 +128,17 @@ info:
     @echo "python:       $(python --version 2>&1)"
     @echo "node:         $(node --version 2>&1)"
     @echo "just:         $(just --version)"
+
+# ─── Optional services ────────────────────────────────────────────────────
+# These require additional setup — see README for details.
+
+# Start a local ChromaDB vector-store server on localhost:8100 (no Docker).
+# Requires the full chromadb package: pip uninstall chromadb-client && pip install chromadb
+# Data is stored in {{odysseus_dir}}/data/chromadb (created on first run).
+chromadb:
+    chroma run --host localhost --port 8100 --path "{{odysseus_dir}}/data/chromadb"
+
+# Seed the npx cache with @playwright/mcp so Odysseus can launch the Playwright MCP server.
+# Run once after `nix develop`; browsers are managed by Nix (no extra download needed).
+playwright-mcp:
+    npx -y @playwright/mcp@latest --version
