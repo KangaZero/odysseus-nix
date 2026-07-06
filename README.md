@@ -174,6 +174,7 @@ After `nix develop`, run `just` (from anywhere — `JUST_JUSTFILE` is exported):
 
 ```text
 just test            # fmt-check + lint + check + build — the one CI runs
+just test-all        # test + install + install-optional + install-node + pytest (full suite)
 just fmt-check       # nixpkgs-fmt --check (verify formatting)
 just lint            # statix + deadnix + shellcheck
 just check           # native flake check + all-systems eval (no cross-build)
