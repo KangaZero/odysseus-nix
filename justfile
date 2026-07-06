@@ -27,6 +27,12 @@ test: fmt-check lint check build
     @echo ""
     @echo "✅ all checks passed"
 
+# Run everything: flake checks + dep installs + full pytest suite.
+test-all: test install install-optional install-node
+    cd "{{odysseus_dir}}" && pytest
+    @echo ""
+    @echo "✅ all checks passed (full)"
+
 # Verify the tree is formatted (no writes). Run `just fmt` to fix.
 fmt-check:
     @echo "→ treefmt --ci (nix/shell/md/yaml)"
