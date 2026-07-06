@@ -238,7 +238,7 @@ System-level deps mirror the project Dockerfile so native Python wheels build cl
 - just (task runner)
 - git, cmake, curl, tmux, openssh, pkg-config
 - nixpkgs-fmt, statix, deadnix, shellcheck (used by `just test`)
-- zlib, openssl, libffi, libxml2/xslt (wheel build headers)
+- zlib, openssl, libffi, libxml2/xslt (wheel build headers), file/libmagic (python-magic runtime)
 - gosu (Linux only — used by the Docker entrypoint)
 - libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the Real-ESRGAN path)
 

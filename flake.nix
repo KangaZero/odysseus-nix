@@ -77,6 +77,7 @@
             libffi
             libxml2
             libxslt
+            file # libmagic — dlopened by python-magic at import time
           ];
 
           # Linux-only extras: gosu (used by Docker entrypoint) and a couple
@@ -105,6 +106,7 @@
             (pkgs.lib.makeLibraryPath ([
               pkgs.stdenv.cc.cc.lib
               pkgs.zlib
+              pkgs.file
             ] ++ opencvLibs));
 
           # Aggregated environment so home-manager / `nix profile install`
