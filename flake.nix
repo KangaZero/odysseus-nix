@@ -209,7 +209,7 @@
               # elsewhere — this is (most likely) the user's odysseus-nix
               # checkout, which the fmt/lint/build recipes need to be able
               # to write to.
-              ODYSSEUS_NIX_DIR="''${ODYSSEUS_NIX_DIR:-$PWD}"
+              export ODYSSEUS_NIX_DIR="''${ODYSSEUS_NIX_DIR:-$PWD}"
 
               # Quality-of-life: drop into the sibling odysseus checkout if it
               # exists. Override with ODYSSEUS_DIR=/path/to/odysseus nix develop.
