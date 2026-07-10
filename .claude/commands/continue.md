@@ -5,7 +5,7 @@ Use after `/slave-on` (which restores session context). This command pulls upstr
 ## 1 — Pull latest odysseus
 
 ```sh
-cd ../odysseus && git pull --ff-only
+git -C "$ODYSSEUS_DIR" pull --ff-only
 ```
 
 If the pull fails (diverged history), report it and stop.
