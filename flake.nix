@@ -188,6 +188,14 @@
                 touch "$MARKER"
               fi
 
+              REQS_OPT="$PWD/requirements-optional.txt"
+              REQS_OPT_MARKER="$VENV_DIR/.requirements-optional.installed"
+              if [ "''${ODYSSEUS_INSTALL_OPTIONAL:-1}" = "1" ] && [ -f "$REQS_OPT" ] \
+                && { [ ! -f "$REQS_OPT_MARKER" ] || [ "$REQS_OPT" -nt "$REQS_OPT_MARKER" ]; }; then
+                echo "installing optional python deps…"
+                pip install -r "$REQS_OPT" && touch "$REQS_OPT_MARKER"
+              fi
+
               exec uvicorn app:app --reload --host 0.0.0.0 --port "''${APP_PORT:-7000}"
             '';
           }).overrideAttrs (_: {
