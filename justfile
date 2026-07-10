@@ -85,7 +85,7 @@ install-hooks:
 install:
     cd "{{odysseus_dir}}" && pip install -r requirements.txt
 
-# Install optional deps (DuckDuckGo search, PyMuPDF form-filling).
+# Install optional deps (faster-whisper, ddgs, PyMuPDF, markitdown, python-magic).
 install-optional:
     cd "{{odysseus_dir}}" && pip install -r requirements-optional.txt
 

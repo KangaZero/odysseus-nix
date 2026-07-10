@@ -175,11 +175,11 @@ After `nix develop`, run `just` (from anywhere — `JUST_JUSTFILE` is exported):
 ```text
 just test            # fmt-check + lint + check + build — the one CI runs
 just test-all        # test + install + install-optional + install-node + pytest (full suite)
-just fmt-check       # nixpkgs-fmt --check (verify formatting)
+just fmt-check       # treefmt --ci (nix/shell/md/yaml — verify formatting)
 just lint            # statix + deadnix + shellcheck
 just check           # native flake check + all-systems eval (no cross-build)
 just build           # nix build .#default .#odysseus-dev
-just fmt             # nixpkgs-fmt (auto-fix)
+just fmt             # treefmt in-place (nix/shell/md/yaml — auto-fix)
 just install-hooks   # wire up the .githooks/pre-push hook
 just lock-update     # nix flake update
 ```
@@ -276,7 +276,7 @@ System-level deps mirror the project Dockerfile so native Python wheels build cl
 - zlib, openssl, libffi, libxml2/xslt (wheel build headers), file/libmagic (python-magic runtime)
 - gosu (Linux only — used by the Docker entrypoint)
 - libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the Real-ESRGAN path)
-- playwright (Playwright browser automation — used by the `@playwright/mcp` MCP server)
+- playwright-driver.browsers (browser binaries pointed at by `PLAYWRIGHT_BROWSERS_PATH`; the `playwright` Python package and `@playwright/mcp` are installed separately via optional deps / npx)
 
 **Optional Python deps** (auto-installed when `ODYSSEUS_INSTALL_OPTIONAL=1`, which is the default):
 
@@ -294,7 +294,7 @@ Python packages themselves are installed via `pip` into the venv, not Nix — ke
 | `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced.  |
 | `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. Recommended for home-manager. |
 | `apps.${system}.default`          | Same launcher, exposed for `nix run`.                                                  |
-| `formatter.${system}`             | `nixpkgs-fmt`.                                                                         |
+| `formatter.${system}`             | `treefmt` (nixpkgs-fmt + shfmt + prettier).                                            |
 
 ## License
 

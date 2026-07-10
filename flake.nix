@@ -258,7 +258,7 @@
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD="1"
 
-              # One venv per project, kept out of the source tree.
+              # One venv per project, inside the checkout at .venv.
               VENV_DIR="''${VENV_DIR:-$PWD/.venv}"
               if [ -d "$VENV_DIR" ] && ! "$VENV_DIR/bin/python" --version > /dev/null 2>&1; then
                 echo "stale venv detected (Python interpreter changed) — recreating"
