@@ -279,7 +279,8 @@
                 REQS_MARKER="$VENV_DIR/.requirements.installed"
                 if [ -f "$REQS" ] && { [ ! -f "$REQS_MARKER" ] || [ "$REQS" -nt "$REQS_MARKER" ]; }; then
                   echo "installing python deps (requirements.txt changed)…"
-                  pip install -r "$REQS" && touch "$REQS_MARKER"
+                  pip install -r "$REQS" && touch "$REQS_MARKER" \
+                    || echo "⚠  pip install failed — run \`pip install -r requirements.txt\` to retry" >&2
                 fi
 
                 REQS_OPT="$PWD/requirements-optional.txt"
@@ -287,7 +288,8 @@
                 if [ "''${ODYSSEUS_INSTALL_OPTIONAL:-1}" = "1" ] && [ -f "$REQS_OPT" ] \
                   && { [ ! -f "$REQS_OPT_MARKER" ] || [ "$REQS_OPT" -nt "$REQS_OPT_MARKER" ]; }; then
                   echo "installing optional python deps (requirements-optional.txt changed)…"
-                  pip install -r "$REQS_OPT" && touch "$REQS_OPT_MARKER"
+                  pip install -r "$REQS_OPT" && touch "$REQS_OPT_MARKER" \
+                    || echo "⚠  optional pip install failed — run \`pip install -r requirements-optional.txt\` to retry" >&2
                 fi
 
                 PKG="$PWD/package.json"
@@ -297,7 +299,8 @@
                   || [ "$PKG" -nt "$NODE_MARKER" ] \
                   || { [ -f "$LOCK" ] && [ "$LOCK" -nt "$NODE_MARKER" ]; }; }; then
                   echo "installing node deps (package.json/lock changed)…"
-                  npm install && touch "$NODE_MARKER"
+                  npm install && touch "$NODE_MARKER" \
+                    || echo "⚠  npm install failed — run \`npm install\` to retry" >&2
                 fi
               fi
 
