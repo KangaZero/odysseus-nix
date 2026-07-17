@@ -11,6 +11,8 @@ sync the managed cache clone to it.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-17
+
 ### Changed
 
 - Drop the `flake-utils` input in favour of `nix-systems/default` + a
@@ -21,6 +23,10 @@ sync the managed cache clone to it.
   in a `perSystem` attrset and projected into each output, keeping the shared
   logic DRY. Supported platforms are unchanged — `nix-systems/default`
   resolves to the same four (`{aarch64,x86_64}-{linux,darwin}`).
+- Re-pin upstream `odysseusRev` to `28d27ee` (2 commits ahead of v0.5.0's
+  `c1d6287`: an Arch NVIDIA Docker docs page and an importer SSRF fix — no
+  Dockerfile/requirements/package changes, so the flake is otherwise
+  untouched).
 
 ## [0.5.0] - 2026-07-14
 
@@ -80,7 +86,8 @@ sync the managed cache clone to it.
   mirrored system deps), `nix run` launcher, and multi-arch platform
   declarations. Pins upstream `odysseusRev` `e5b9275`.
 
-[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/KangaZero/odysseus-nix/compare/v0.3.0...v0.3.1
