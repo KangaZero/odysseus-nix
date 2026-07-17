@@ -69,7 +69,7 @@ build:
 fmt:
     cd "{{flake_dir}}" && nix fmt
 
-# Update flake.lock to the latest nixpkgs/flake-utils.
+# Update flake.lock to the latest nixpkgs/treefmt-nix/systems.
 lock-update:
     nix flake update
 
