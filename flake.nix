@@ -122,24 +122,28 @@
 
             # Aggregated environment so home-manager / `nix profile install`
             # users can pull in all the tooling with a single package.
-            odysseusEnv = (pkgs.buildEnv {
+            odysseusEnv = pkgs.buildEnv {
               name = "odysseus-env";
               paths = allDeps;
-            }).overrideAttrs (_: {
               meta = {
                 description = "Odysseus dev environment — Python 3.14 + Node LTS + system deps";
                 homepage = "https://github.com/KangaZero/odysseus-nix";
                 maintainers = [ maintainer ];
               };
-            });
+            };
 
             # Standalone launcher for `nix run`. Resolves a checkout (from
             # $1, $ODYSSEUS_DIR, $PWD, or an auto-managed cache clone),
             # bootstraps a venv, installs requirements.txt, and exec's uvicorn.
             # Used by apps.default below.
-            odysseusDev = (pkgs.writeShellApplication {
+            odysseusDev = pkgs.writeShellApplication {
               name = "odysseus-dev";
               runtimeInputs = allDeps;
+              meta = {
+                description = "Launch the Odysseus FastAPI app from a local or auto-cloned checkout";
+                homepage = "https://github.com/KangaZero/odysseus-nix";
+                maintainers = [ maintainer ];
+              };
               text = ''
                 # Where to look for / clone the odysseus checkout. Override
                 # the clone URL with $ODYSSEUS_REPO_URL (e.g. point at a fork).
@@ -209,13 +213,7 @@
 
                 exec uvicorn app:app --reload --host 0.0.0.0 --port "''${APP_PORT:-7000}"
               '';
-            }).overrideAttrs (_: {
-              meta = {
-                description = "Launch the Odysseus FastAPI app from a local or auto-cloned checkout";
-                homepage = "https://github.com/KangaZero/odysseus-nix";
-                maintainers = [ maintainer ];
-              };
-            });
+            };
 
             devShell = pkgs.mkShell {
               name = "odysseus-dev";

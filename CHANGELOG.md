@@ -11,6 +11,13 @@ sync the managed cache clone to it.
 
 ## [Unreleased]
 
+### Changed
+
+- Set `meta` inline on the `odysseus-env` (`buildEnv`) and `odysseus-dev`
+  (`writeShellApplication`) derivations instead of via a trailing
+  `.overrideAttrs`. Both builders forward `meta` directly, so the wrapper was
+  legacy boilerplate.
+
 ## [0.6.0] - 2026-07-17
 
 ### Changed
