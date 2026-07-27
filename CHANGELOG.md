@@ -11,6 +11,8 @@ sync the managed cache clone to it.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-27
+
 ### Added
 
 - `nix develop .#browser` — an opt-in dev shell that adds `chromium` and sets
@@ -30,6 +32,10 @@ sync the managed cache clone to it.
 - Point the launcher's default clone URL at `odysseus-dev/odysseus` (upstream
   transferred orgs from `pewdiepie-archdaemon`). The old URL still redirects;
   this tracks the canonical location.
+- Re-pin upstream `odysseusRev` `28d27ee` → `d8a2059` (live `dev` HEAD). The
+  drift added apt `chromium` for the Browser MCP (handled by the new `.#browser`
+  shell) and the org transfer; `requirements*.txt`, `package-lock.json`, and
+  `pyproject.toml` are byte-identical, so no Python/Node dep changes.
 
 ## [0.6.0] - 2026-07-17
 
@@ -106,7 +112,8 @@ sync the managed cache clone to it.
   mirrored system deps), `nix run` launcher, and multi-arch platform
   declarations. Pins upstream `odysseusRev` `e5b9275`.
 
-[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.3.1...v0.4.0
