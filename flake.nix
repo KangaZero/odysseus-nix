@@ -147,7 +147,7 @@
               text = ''
                 # Where to look for / clone the odysseus checkout. Override
                 # the clone URL with $ODYSSEUS_REPO_URL (e.g. point at a fork).
-                repo_url="''${ODYSSEUS_REPO_URL:-https://github.com/pewdiepie-archdaemon/odysseus.git}"
+                repo_url="''${ODYSSEUS_REPO_URL:-https://github.com/odysseus-dev/odysseus.git}"
                 cache_root="''${XDG_CACHE_HOME:-$HOME/.cache}/odysseus-nix"
                 cache_dir="$cache_root/odysseus"
 
@@ -321,16 +321,48 @@
                 echo "run:   uvicorn app:app --reload --port 7000   (or: just dev)"
               '';
             };
+
+            # Opt-in variant of the dev shell that also provisions a chromium
+            # binary for odysseus' built-in Browser MCP server (`npx
+            # @playwright/mcp`). Upstream's Dockerfile installs apt `chromium`;
+            # the app resolves a browser via ODYSSEUS_BROWSER_EXECUTABLE (or
+            # `chromium` on PATH) and passes it to Playwright as
+            # `--executable-path` — it force-overrides PLAYWRIGHT_BROWSERS_PATH,
+            # so the shell's playwright-driver bundle can't satisfy the MCP.
+            # chromium is a ~1.7 GiB, Linux-only closure, so rather than bloat
+            # every default shell it lives here, entered explicitly with
+            # `nix develop .#browser`. Darwin has no nixpkgs chromium → this
+            # shell is Linux-only (null, and omitted from devShells, elsewhere).
+            browserShell =
+              if pkgs.stdenv.isLinux then
+                devShell.overrideAttrs
+                  (prev: {
+                    nativeBuildInputs = (prev.nativeBuildInputs or [ ]) ++ [ pkgs.chromium ];
+                    shellHook = prev.shellHook + ''
+                      export ODYSSEUS_BROWSER_EXECUTABLE="${pkgs.chromium}/bin/chromium"
+                      echo "  browser: $ODYSSEUS_BROWSER_EXECUTABLE (built-in Browser MCP enabled)"
+                    '';
+                  })
+              else
+                null;
           in
           {
-            inherit treefmtEval odysseusEnv odysseusDev devShell;
+            inherit treefmtEval odysseusEnv odysseusDev devShell browserShell;
           }
       );
     in
     {
-      devShells = forEachSystem (system: _pkgs: {
-        default = perSystem.${system}.devShell;
-      });
+      devShells = forEachSystem (
+        system: _pkgs:
+          {
+            default = perSystem.${system}.devShell;
+          }
+          # `nix develop .#browser` — default shell + chromium for the built-in
+          # Browser MCP. Linux-only (browserShell is null on Darwin).
+          // nixpkgs.lib.optionalAttrs (perSystem.${system}.browserShell != null) {
+            browser = perSystem.${system}.browserShell;
+          }
+      );
 
       # Packages — used by home-manager / `nix profile install` consumers.
       #   packages.default     — alias for odysseus-env

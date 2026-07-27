@@ -11,12 +11,25 @@ sync the managed cache clone to it.
 
 ## [Unreleased]
 
+### Added
+
+- `nix develop .#browser` — an opt-in dev shell that adds `chromium` and sets
+  `ODYSSEUS_BROWSER_EXECUTABLE` for odysseus' built-in Browser MCP server
+  (`npx @playwright/mcp`). Upstream's Dockerfile now installs apt `chromium`;
+  the app resolves the browser via `ODYSSEUS_BROWSER_EXECUTABLE`/PATH and
+  overrides `PLAYWRIGHT_BROWSERS_PATH`, so the existing playwright-driver
+  bundle can't satisfy it. `chromium` is a ~1.7 GiB, Linux-only closure, so it
+  lives in this opt-in shell rather than bloating the default one. Linux-only.
+
 ### Changed
 
 - Set `meta` inline on the `odysseus-env` (`buildEnv`) and `odysseus-dev`
   (`writeShellApplication`) derivations instead of via a trailing
   `.overrideAttrs`. Both builders forward `meta` directly, so the wrapper was
   legacy boilerplate.
+- Point the launcher's default clone URL at `odysseus-dev/odysseus` (upstream
+  transferred orgs from `pewdiepie-archdaemon`). The old URL still redirects;
+  this tracks the canonical location.
 
 ## [0.6.0] - 2026-07-17
 
