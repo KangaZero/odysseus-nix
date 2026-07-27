@@ -1,6 +1,6 @@
 # odysseus-nix
 
-A Nix flake providing a reproducible dev environment for [Odysseus](https://github.com/pewdiepie-archdaemon/odysseus) — Python 3.14, Node.js (LTS), and every system-level dep needed to build the native Python wheels.
+A Nix flake providing a reproducible dev environment for [Odysseus](https://github.com/odysseus-dev/odysseus) — Python 3.14, Node.js (LTS), and every system-level dep needed to build the native Python wheels.
 
 Works on:
 
@@ -21,7 +21,7 @@ nix run github:KangaZero/odysseus-nix
 
 What this does:
 
-1. Clones [odysseus](https://github.com/pewdiepie-archdaemon/odysseus) into `${XDG_CACHE_HOME:-~/.cache}/odysseus-nix/odysseus` (one-time, shallow).
+1. Clones [odysseus](https://github.com/odysseus-dev/odysseus) into `${XDG_CACHE_HOME:-~/.cache}/odysseus-nix/odysseus` (one-time, shallow).
 2. Creates `.venv/` in that checkout and `pip install`s `requirements.txt`.
 3. Starts `uvicorn app:app --reload` on `:7000`.
 
@@ -67,11 +67,11 @@ nix run github:KangaZero/odysseus-nix/<commit-sha>
 nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
-For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
+For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, `v0.4.0`, `v0.5.0`, `v0.6.0`, `v0.7.0`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
 
 ```sh
-nix run --refresh github:KangaZero/odysseus-nix/v0.3.1
-nix develop github:KangaZero/odysseus-nix/v0.3.1
+nix run --refresh github:KangaZero/odysseus-nix/v0.7.0
+nix develop github:KangaZero/odysseus-nix/v0.7.0
 ```
 
 (`--refresh` is only needed the first time after a new commit lands on the branch — it bypasses Nix's flake tarball-ttl cache. Override the baked rev at runtime with `ODYSSEUS_REV=<sha>`.)
@@ -159,7 +159,7 @@ Env knobs (apply to both `nix run` and `nix develop` unless noted):
 | Variable                    | Default                                                                | Effect                                                                     |
 | --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `ODYSSEUS_DIR`              | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                             |
-| `ODYSSEUS_REPO_URL`         | `https://github.com/pewdiepie-archdaemon/odysseus.git`                 | Clone URL used by `nix run` when no checkout is found (point at a fork).   |
+| `ODYSSEUS_REPO_URL`         | `https://github.com/odysseus-dev/odysseus.git`                         | Clone URL used by `nix run` when no checkout is found (point at a fork).   |
 | `ODYSSEUS_AUTO_INSTALL`     | `1`                                                                    | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`.       |
 | `ODYSSEUS_INSTALL_OPTIONAL` | `1`                                                                    | Dev shell only. Set to `0` to skip installing `requirements-optional.txt`. |
 | `APP_PORT`                  | `7000`                                                                 | Port for `just run` / `nix run`.                                           |
@@ -224,15 +224,18 @@ pip install chromadb
 just chromadb     # runs ChromaDB server on localhost:8100
 ```
 
-### Playwright MCP
+### Browser MCP (`@playwright/mcp`)
 
-The built-in Playwright MCP server lets Odysseus control a browser. Playwright itself is bundled by the Nix shell; just seed the `npx` cache once:
+The built-in Browser MCP server lets Odysseus drive a real browser via `npx @playwright/mcp`. It needs an actual chromium binary: the app resolves one from `ODYSSEUS_BROWSER_EXECUTABLE` (or a `chromium` on `$PATH`) and hands it to Playwright as `--executable-path` — and it **overrides** `PLAYWRIGHT_BROWSERS_PATH` with its own local cache, so the shell's bundled playwright-driver browsers can't satisfy it.
+
+Because chromium is a ~1.7 GiB, Linux-only closure, it's kept out of the default shell. Enter the **opt-in browser shell** instead, which provisions chromium and exports `ODYSSEUS_BROWSER_EXECUTABLE`:
 
 ```sh
-just playwright-mcp   # downloads @playwright/mcp into the npx cache
+nix develop .#browser   # Linux only; default shell + chromium for the Browser MCP
+just playwright-mcp     # seed @playwright/mcp into the npx cache (one-time)
 ```
 
-Then restart the app (`just run`). The `PLAYWRIGHT_BROWSERS_PATH` env var is exported by the shell so no separate browser download is needed.
+Then start the app (`just run`). To use your own browser instead of the opt-in shell, export `ODYSSEUS_BROWSER_EXECUTABLE=/path/to/chromium` before launching.
 
 ## CI & git pre-push hook
 
@@ -287,14 +290,15 @@ Python packages themselves are installed via `pip` into the venv, not Nix — ke
 
 ## Flake outputs
 
-| Output                            | What                                                                                   |
-| --------------------------------- | -------------------------------------------------------------------------------------- |
-| `devShells.${system}.default`     | Interactive dev shell (consumed by `nix develop`).                                     |
-| `packages.${system}.default`      | Alias for `odysseus-env`.                                                              |
-| `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced.  |
-| `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. Recommended for home-manager. |
-| `apps.${system}.default`          | Same launcher, exposed for `nix run`.                                                  |
-| `formatter.${system}`             | `treefmt` (nixpkgs-fmt + shfmt + prettier).                                            |
+| Output                            | What                                                                                         |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| `devShells.${system}.default`     | Interactive dev shell (consumed by `nix develop`).                                           |
+| `devShells.${system}.browser`     | Default shell + chromium for the built-in Browser MCP (`nix develop .#browser`). Linux only. |
+| `packages.${system}.default`      | Alias for `odysseus-env`.                                                                    |
+| `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced.        |
+| `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. Recommended for home-manager.       |
+| `apps.${system}.default`          | Same launcher, exposed for `nix run`.                                                        |
+| `formatter.${system}`             | `treefmt` (nixpkgs-fmt + shfmt + prettier).                                                  |
 
 ## License
 
