@@ -417,7 +417,11 @@ flake small and avoids fighting nixpkgs over PyPI versions like
 > and the dev shell, so content-based MIME sniffing in `src/upload_handler.py`
 > works here exactly as it does in the container. The install is marker-guarded
 > at `$VENV_DIR/.python-magic-<version>.installed` and is non-fatal — if it
-> fails, sniffing degrades to extension detection and startup continues.
+> fails, sniffing degrades to extension detection and startup continues. Note
+> that the wrapper finds `libmagic.so.1` via the `LD_LIBRARY_PATH` the launcher
+> and dev shell export; activating the venv by hand outside either of them gives
+> `ImportError: failed to find libmagic`, which is expected rather than a broken
+> install.
 
 # Flake outputs
 
