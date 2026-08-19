@@ -104,14 +104,14 @@
 
             # Linux-only extras: gosu (used by Docker entrypoint) and a couple
             # of libs that the manylinux wheels expect when building from source.
-            linuxDeps = pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [
+            linuxDeps = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux (with pkgs; [
               gosu
               glibcLocales
             ] ++ opencvLibs);
 
             # macOS: nothing extra required — the SDK frameworks are pulled in
             # automatically by stdenv on Darwin.
-            # Was: darwinDeps = pkgs.lib.optionals pkgs.stdenv.isDarwin [ ];
+            # Was: darwinDeps = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ ];
             #   The isDarwin guard wrapped an empty list, so it evaluated to [ ]
             #   on every platform — a dead condition. Reduced to a plain [ ],
             #   kept as an explicit, named hook for future Darwin-only deps.
@@ -124,7 +124,7 @@
             # `libstdc++.so.6` / `libz.so.1` and won't find them under Nix
             # without an explicit LD_LIBRARY_PATH. Linux-only; on Darwin the
             # loader uses @rpath and this var is ignored.
-            wheelLibPath = pkgs.lib.optionalString pkgs.stdenv.isLinux
+            wheelLibPath = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux
               (pkgs.lib.makeLibraryPath ([
                 pkgs.stdenv.cc.cc.lib
                 pkgs.zlib
@@ -191,7 +191,7 @@
                 # Make pip-installed manylinux wheels (numpy etc.) find
                 # libstdc++/libz at runtime. Emitted only on Linux; on Darwin the
                 # loader uses @rpath, so this is omitted entirely.
-                ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+                ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                   export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
                 ''}
 
@@ -268,7 +268,7 @@
                 # Make pip-installed manylinux wheels (numpy etc.) find
                 # libstdc++/libz at runtime. Emitted only on Linux; on Darwin the
                 # loader uses @rpath, so this is omitted entirely.
-                ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+                ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                   export LD_LIBRARY_PATH="${wheelLibPath}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
                 ''}
 
@@ -345,7 +345,7 @@
             # `nix develop .#browser`. Darwin has no nixpkgs chromium → this
             # shell is Linux-only (null, and omitted from devShells, elsewhere).
             browserShell =
-              if pkgs.stdenv.isLinux then
+              if pkgs.stdenv.hostPlatform.isLinux then
                 devShell.overrideAttrs
                   (prev: {
                     nativeBuildInputs = (prev.nativeBuildInputs or [ ]) ++ [ pkgs.chromium ];

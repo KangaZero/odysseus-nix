@@ -26,8 +26,24 @@ sync the managed cache clone to it.
   2026-06. Intel Macs need a nixpkgs pinned to `nixpkgs-26.05-darwin`, which
   receives security fixes until the end of 2026.
 
+### Fixed
+
+- Replace the deprecated `stdenv.isLinux` / `stdenv.isDarwin` shorthands with
+  `stdenv.hostPlatform.isLinux` / `.isDarwin`. nixpkgs 26.11 emits
+  `evaluation warning: stdenv.isLinux is deprecated` for the old spelling.
+
 ### Changed
 
+- Restructure `README.md` along the [Doom Emacs][doom-readme] README
+  conventions (centred header with badges, table of contents, GFM
+  admonitions, reference-style links) and correct six stale claims:
+  `ODYSSEUS_INSTALL_OPTIONAL` is honoured by the launcher too, not just the
+  dev shell; `playwright-driver.browsers` is a dev-shell env var and is **not**
+  in the `odysseus-env` closure; `python-magic` is installed by upstream's
+  Dockerfile only and appears in no requirements file, so MIME sniffing
+  degrades to extension detection here; `checks.<system>.formatting`,
+  `ODYSSEUS_BROWSER_EXECUTABLE`, `ODYSSEUS_REV`, `ODYSSEUS_NO_SYNC` and
+  `just clean` were undocumented in their tables.
 - Bump `flake.lock`: nixpkgs `d407951` (2026-07-05) → `0ae2bc1` (2026-08-18),
   moving the unstable channel to 26.11 (`python314` 3.14.4 → 3.14.7, `nodejs`
   24.19.0); treefmt-nix `db94781` (2026-05-31) → `27b3b12` (2026-08-16). The
@@ -142,6 +158,7 @@ sync the managed cache clone to it.
   mirrored system deps), `nix run` launcher, and multi-arch platform
   declarations. Pins upstream `odysseusRev` `e5b9275`.
 
+[doom-readme]: https://github.com/doomemacs/doomemacs/blob/master/README.md
 [Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.8.0...HEAD
 [0.8.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.6.0...v0.7.0
