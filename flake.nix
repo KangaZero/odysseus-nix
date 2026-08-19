@@ -18,13 +18,24 @@
   outputs =
     { self, nixpkgs, systems, treefmt-nix, ... }:
     let
+      # nixpkgs 26.11 DROPPED x86_64-darwin: `legacyPackages.x86_64-darwin`
+      # now throws on eval, so `nix flake check --all-systems` fails even with
+      # --no-build. `import systems` (nix-systems/default) still yields all
+      # four platforms, so the list needs narrowing before genAttrs sees it.
+      # CI already only covers three (the macos-13 runner was dropped in
+      # 2026-06).
+      #
+      # Filtering (rather than hardcoding the list) keeps the `systems` input
+      # and its `inputs.systems.follows` override contract intact.
+      supportedSystems = nixpkgs.lib.remove "x86_64-darwin" (import systems);
+
       # Map a callback over every supported system, handing it the system
       # string and that system's pre-instantiated nixpkgs. Replaces
       # flake-utils.lib.eachSystem; each flake output below wraps its own
       # forEachSystem call (genAttrs yields { <system> = value; }).
       #
       forEachSystem =
-        f: nixpkgs.lib.genAttrs (import systems) (system: f system nixpkgs.legacyPackages.${system});
+        f: nixpkgs.lib.genAttrs supportedSystems (system: f system nixpkgs.legacyPackages.${system});
 
       # All per-system build products, computed ONCE here and projected into
       # the individual flake outputs below. Keeps the heavy let block DRY
