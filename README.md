@@ -1,16 +1,88 @@
+<div align="center">
+
 # odysseus-nix
 
-A Nix flake providing a reproducible dev environment for [Odysseus](https://github.com/odysseus-dev/odysseus) — Python 3.14, Node.js (LTS), and every system-level dep needed to build the native Python wheels.
+[Install](#install) • [Usage](#usage) • [Configuration](#configuration) • [Flake outputs](#flake-outputs) • [Contribute](#contribute)
 
-Works on:
+[![Release](https://img.shields.io/github/v/tag/KangaZero/odysseus-nix?style=flat-square&label=release&color=58839b)](https://github.com/KangaZero/odysseus-nix/tags)
+[![CI](https://img.shields.io/github/actions/workflow/status/KangaZero/odysseus-nix/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/KangaZero/odysseus-nix/actions/workflows/ci.yml)
+![Latest commit](https://img.shields.io/github/last-commit/KangaZero/odysseus-nix?style=flat-square)
+![Supports Python 3.14](https://img.shields.io/badge/Python-3.14-3776ab?style=flat-square&logo=python&logoColor=white)
+![Nix flake](https://img.shields.io/badge/Nix-flake-5277c3?style=flat-square&logo=nixos&logoColor=white)
+[![License: MIT](https://img.shields.io/github/license/KangaZero/odysseus-nix?style=flat-square)](./LICENSE)
+
+</div>
+
+---
+
+### Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Install](#install)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Recipes](#recipes)
+- [Optional services](#optional-services)
+- [What's bundled](#whats-bundled)
+- [Flake outputs](#flake-outputs)
+- [CI and the pre-push hook](#ci-and-the-pre-push-hook)
+- [Contribute](#contribute)
+- [License](#license)
+
+# Introduction
+
+> It is a story as old as time. A developer clones a Python app, meets a wall of
+> apt packages, dlopen failures, and a `libxcb.so.1: cannot open shared object
+file` that no clean `pip install` explains. This flake is the escape hatch.
+
+**odysseus-nix** is a Nix flake providing a reproducible dev environment for
+[Odysseus][odysseus] — Python 3.14, Node.js LTS, and every system-level
+dependency needed to build the project's native Python wheels. The system deps
+mirror upstream's `Dockerfile` so that what builds in the container builds here.
+
+Two branches of behaviour:
+
+| Branch             | Upstream odysseus checkout                                               |
+| ------------------ | ------------------------------------------------------------------------ |
+| `main`             | **Rolling.** Clones upstream `dev` HEAD, no rev pin.                     |
+| `vX.Y.Z` (release) | **Pinned.** Bakes in an `odysseusRev`; the cache clone auto-syncs to it. |
+
+# Features
+
+- **Hands-off.** `nix run` clones the app, builds a venv, installs deps, and
+  serves it. No manual steps.
+- **Dockerfile-mirrored system deps**, so native wheels (numpy, cryptography,
+  bcrypt, PyMuPDF, onnxruntime) build on every supported arch.
+- **Reproducible app checkouts** via release branches that pin an upstream rev.
+- **Opt-out, not opt-in.** Automation is on by default; every behaviour has an
+  env-var escape hatch.
+- **One gate.** `just test` runs formatting, lint, flake checks, and builds —
+  the same command CI and the `pre-push` hook run.
+- **Opt-in browser shell** for Odysseus' built-in Browser MCP server, keeping a
+  1.7 GiB chromium closure out of the default shell.
+
+# Prerequisites
+
+[Nix][nix] with flakes enabled. The [Determinate Nix installer][determinate]
+turns flakes on by default; on upstream installs add
+`experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.
+
+Supported systems:
 
 - `x86_64-linux`
 - `aarch64-linux`
 - `aarch64-darwin` (Apple Silicon)
 
-## Quickstart
+> [!IMPORTANT]
+> `x86_64-darwin` (Intel Mac) is **no longer supported**. nixpkgs 26.11 dropped
+> the platform, so `legacyPackages.x86_64-darwin` throws during evaluation; the
+> flake filters it out of its system list. Intel Macs need a nixpkgs pinned to
+> the `nixpkgs-26.05-darwin` branch, which receives security fixes until the end
+> of 2026.
 
-You need [Nix](https://nixos.org/download) with flakes enabled. (The [Determinate Nix installer](https://determinate.systems/nix) turns flakes on by default. Upstream installs: add `experimental-features = nix-command flakes` to `~/.config/nix/nix.conf`.)
+# Install
 
 **Run Odysseus with one command — no clones required:**
 
@@ -18,15 +90,19 @@ You need [Nix](https://nixos.org/download) with flakes enabled. (The [Determinat
 nix run github:KangaZero/odysseus-nix
 ```
 
-What this does:
+What that does:
 
-1. Clones [odysseus](https://github.com/odysseus-dev/odysseus) into `${XDG_CACHE_HOME:-~/.cache}/odysseus-nix/odysseus` (one-time, shallow).
-2. Creates `.venv/` in that checkout and `pip install`s `requirements.txt`.
+1. Clones [odysseus][odysseus] into `${XDG_CACHE_HOME:-~/.cache}/odysseus-nix/odysseus`
+   (one-time, shallow).
+2. Creates `.venv/` in that checkout and installs `requirements.txt` — plus
+   `requirements-optional.txt` unless `ODYSSEUS_INSTALL_OPTIONAL=0`.
 3. Starts `uvicorn app:app --reload` on `:7000`.
 
-Subsequent runs reuse the cache; `pip install` is skipped unless `requirements.txt` changed.
+Subsequent runs reuse the cache; installs are skipped unless the manifests
+changed.
 
-**Use an existing checkout** — pass a path, set `ODYSSEUS_DIR`, or just `cd` into one:
+**Use an existing checkout** — pass a path, set `ODYSSEUS_DIR`, or just `cd`
+into one:
 
 ```sh
 nix run github:KangaZero/odysseus-nix -- /path/to/odysseus
@@ -41,7 +117,8 @@ ODYSSEUS_REPO_URL=https://github.com/you/odysseus-fork.git \
   nix run github:KangaZero/odysseus-nix
 ```
 
-**For an interactive dev shell** (with `just`, auto-installed deps, etc.):
+**For an interactive dev shell** (with `just`, auto-installed deps, the full
+toolchain on `$PATH`):
 
 ```sh
 git clone https://github.com/KangaZero/odysseus-nix.git
@@ -49,35 +126,43 @@ cd odysseus-nix
 nix develop
 ```
 
-The dev shell looks for a sibling `../odysseus` checkout. Point at any path with `ODYSSEUS_DIR=/path/to/odysseus nix develop`.
+The dev shell looks for a sibling `../odysseus` checkout; point it anywhere with
+`ODYSSEUS_DIR=/path/to/odysseus nix develop`. Then run `just dev`.
 
-Then either `uvicorn app:app --reload` or `just dev`.
+# Usage
 
-## Three ways to use it
+## Pinning for reproducibility
 
-### 1. Standalone — `nix run` or `nix develop`
-
-The Quickstart above. `nix run` is the one-shot "just start the server" path; `nix develop` is the interactive shell with the full toolchain on `$PATH`.
-
-Both forms resolve `main` by default. **`main` is rolling**: the launcher shallow-clones upstream odysseus's default branch (`dev`) with no rev pin, so it tracks upstream HEAD and `ODYSSEUS_REV` has _no effect here_. You can still pin the _flake itself_ to a commit for reproducible tooling in scripts / CI (this pins the Nix env, not the odysseus checkout):
+`nix run` and `nix develop` resolve `main` by default, which is **rolling** — the
+launcher shallow-clones upstream's default branch (`dev`) with no rev pin, so it
+tracks upstream HEAD and `ODYSSEUS_REV` has _no effect_. Pinning the flake ref
+pins the _Nix env_, not the odysseus checkout:
 
 ```sh
 nix run github:KangaZero/odysseus-nix/<commit-sha>
 nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
-For a reproducible **upstream odysseus checkout**, target a **release branch** instead. Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, `v0.4.0`, `v0.5.0`, `v0.6.0`, `v0.7.0`, …) bake in a specific upstream odysseus rev — the managed cache clone auto-syncs to it on first run, so two machines get the same checkout. This rev-pinning, and the `ODYSSEUS_REV=<sha>` runtime override, exist **only on release branches, not on `main`**:
+For a reproducible **upstream odysseus checkout**, target a **release branch**.
+Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, `v0.4.0`, `v0.5.0`,
+`v0.6.0`, `v0.7.0`, `v0.8.0`, …) bake in a specific upstream rev, and the managed
+cache clone auto-syncs to it on first run, so two machines get the same checkout:
 
 ```sh
-nix run --refresh github:KangaZero/odysseus-nix/v0.7.0
-nix develop github:KangaZero/odysseus-nix/v0.7.0
+nix run --refresh github:KangaZero/odysseus-nix/v0.8.0
+nix develop github:KangaZero/odysseus-nix/v0.8.0
 ```
 
-(`--refresh` is only needed the first time after a new commit lands on the branch — it bypasses Nix's flake tarball-ttl cache. Override the baked rev at runtime with `ODYSSEUS_REV=<sha>`.)
+> [!NOTE]
+> Rev-pinning — and the `ODYSSEUS_REV` / `ODYSSEUS_NO_SYNC` overrides — exist
+> **only on release branches, not on `main`**. `--refresh` is only needed the
+> first time after a new commit lands on the branch; it bypasses Nix's flake
+> tarball-ttl cache.
 
-Best practice is to consume this flake as an input from your own flake (next section) so the rev is captured in your `flake.lock`.
+Best practice is to consume this flake as an input from your own flake, so the
+rev is captured in your `flake.lock`.
 
-### 2. Add as an input to your own flake
+## As an input to your own flake
 
 ```nix
 {
@@ -108,9 +193,11 @@ Best practice is to consume this flake as an input from your own flake (next sec
 }
 ```
 
-### 3. Add to home-manager
+## With home-manager
 
-**Recommended:** add the `odysseus-dev` launcher so `odysseus-dev` is on your `$PATH` everywhere. It's a single script with no toolchain in your user profile, so there are no collisions with packages you already have (`just`, `nodejs`, `curl`, etc.).
+**Recommended:** install the `odysseus-dev` launcher so `odysseus-dev` is on your
+`$PATH` everywhere. It is a single script with no toolchain in your user profile,
+so nothing collides with packages you already have.
 
 ```nix
 # flake.nix
@@ -139,41 +226,67 @@ Best practice is to consume this flake as an input from your own flake (next sec
 }
 ```
 
-After `home-manager switch`, `odysseus-dev [path-to-checkout]` works from any shell.
+After `home-manager switch`, `odysseus-dev [path-to-checkout]` works from any
+shell.
 
-**Alternative:** if you actually want every tool (Python 3.14, Node, just, cmake, statix, …) surfaced at the user level — not just the launcher — swap `odysseus-dev` for `odysseus-env` above. ⚠️ Heads-up: `odysseus-env` is a `buildEnv` aggregating ~20 packages, so it'll collide with anything you have in `home.packages` that ships the same binary (commonly `just`, `nodejs`, `curl`, `git`, `cmake`). Remove those from your `home.packages` first, or stick with `odysseus-dev` and use `nix develop github:KangaZero/odysseus-nix` for the full toolchain on demand.
+> [!WARNING]
+> The **alternative** — swapping `odysseus-dev` for `odysseus-env` to surface
+> every tool at the user level — installs a `buildEnv` aggregating ~20 packages.
+> It collides with anything in your `home.packages` that ships the same binary
+> (commonly `just`, `nodejs`, `curl`, `git`, `cmake`). Remove those first, or
+> stick with `odysseus-dev` and use `nix develop github:KangaZero/odysseus-nix`
+> for the full toolchain on demand.
 
-## What the dev shell does
+## With direnv
 
-When you enter `nix develop` from this repo:
+An `.envrc` ships in this repo. Install [direnv][direnv], then:
+
+```sh
+cd odysseus-nix
+direnv allow
+```
+
+The shell now auto-loads whenever you `cd` in. The `.envrc` includes
+`watch_file flake.lock`, so direnv re-enters the shell after `nix flake update`
+— no manual `direnv reload`.
+
+# Configuration
+
+Entering `nix develop` from this repo:
 
 1. `cd`s into `$ODYSSEUS_DIR` (default `../odysseus`).
-2. Creates `data/`, `logs/`, `services/cache/search/` — the app expects them on first boot.
+2. Creates `data/`, `logs/`, `services/cache/search/` — the app expects them on
+   first boot.
 3. Creates/activates `.venv/` inside the checkout.
-4. Runs `pip install -r requirements.txt` and `npm install` — but only when those manifests change (mtime-marker check, so re-entering is a no-op).
+4. Installs `requirements.txt`, `requirements-optional.txt`, and npm deps — but
+   only when those manifests change (mtime-marker check, so re-entering is a
+   no-op).
 5. Exports `JUST_JUSTFILE` so `just <recipe>` works from anywhere in the shell.
 
 Env knobs (apply to both `nix run` and `nix develop` unless noted):
 
-| Variable                    | Default                                                                | Effect                                                                     |
-| --------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `ODYSSEUS_DIR`              | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                             |
-| `ODYSSEUS_REPO_URL`         | `https://github.com/odysseus-dev/odysseus.git`                         | Clone URL used by `nix run` when no checkout is found (point at a fork).   |
-| `ODYSSEUS_AUTO_INSTALL`     | `1`                                                                    | Dev shell only. Set to `0` to skip auto-`pip install`/`npm install`.       |
-| `ODYSSEUS_INSTALL_OPTIONAL` | `1`                                                                    | Dev shell only. Set to `0` to skip installing `requirements-optional.txt`. |
-| `APP_PORT`                  | `7000`                                                                 | Port for `just run` / `nix run`.                                           |
-| `VENV_DIR`                  | `$ODYSSEUS_DIR/.venv`                                                  | Path to the Python venv.                                                   |
-| `XDG_CACHE_HOME`            | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).  |
+| Variable                      | Default                                                                | Effect                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `ODYSSEUS_DIR`                | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                             |
+| `ODYSSEUS_REPO_URL`           | `https://github.com/odysseus-dev/odysseus.git`                         | Clone URL used by `nix run` when no checkout is found (point at a fork).   |
+| `ODYSSEUS_REV`                | the branch's baked-in `odysseusRev`                                    | **Release branches only.** Full SHA to sync the managed cache clone to.    |
+| `ODYSSEUS_NO_SYNC`            | `0`                                                                    | **Release branches only.** Set to `1` to skip syncing the cache clone.     |
+| `ODYSSEUS_AUTO_INSTALL`       | `1`                                                                    | **Dev shell only.** Set to `0` to skip auto-`pip install` / `npm install`. |
+| `ODYSSEUS_INSTALL_OPTIONAL`   | `1`                                                                    | Set to `0` to skip installing `requirements-optional.txt`.                 |
+| `ODYSSEUS_BROWSER_EXECUTABLE` | unset (set by `nix develop .#browser`)                                 | Browser binary handed to the built-in Browser MCP server.                  |
+| `APP_PORT`                    | `7000`                                                                 | Port for `just run` / `nix run`.                                           |
+| `VENV_DIR`                    | `.venv` inside the resolved checkout                                   | Path to the Python venv.                                                   |
+| `XDG_CACHE_HOME`              | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).  |
 
-## Just recipes
+# Recipes
 
-After `nix develop`, run `just` (from anywhere — `JUST_JUSTFILE` is exported):
+After `nix develop`, run `just` (from anywhere — `JUST_JUSTFILE` is exported).
 
-**CI gate** — these are what `just test` (and CI / git pre-push) enforce:
+**CI gate** — what `just test`, CI, and the `pre-push` hook enforce:
 
 ```text
 just test            # fmt-check + lint + check + build — the one CI runs
-just test-all        # test + install + install-optional + install-node + pytest (full suite)
+just test-all        # test + install + install-optional + install-node + pytest
 just fmt-check       # treefmt --ci (nix/shell/md/yaml — verify formatting)
 just lint            # statix + deadnix + shellcheck
 just check           # native flake check + all-systems eval (no cross-build)
@@ -196,98 +309,99 @@ just pytest [args...] # pytest, with optional args (e.g. `just pytest -k auth`)
 just docker-up        # docker compose up --build -d
 just docker-down      # docker compose down
 just docker-logs      # docker compose logs -f
+just clean            # rm -rf .venv node_modules (forces a clean re-install)
 just info             # print resolved paths + versions
 ```
 
-## Optional services
+# Optional services
 
-These features require a one-time setup step beyond `nix develop`.
+These need a one-time setup step beyond `nix develop`.
 
-### ChromaDB (vector RAG + semantic memory)
+## ChromaDB (vector RAG + semantic memory)
 
-ChromaDB powers vector search, semantic memory, and tool selection. The app connects to `localhost:8100` by default and retries lazily if it's not running.
-
-**With Docker** (recommended for production-like setups):
-
-```sh
-just docker-up    # starts the full stack including ChromaDB
-```
-
-**Without Docker** (lightweight, foreground process):
-
-Requires the full `chromadb` package instead of the lightweight `chromadb-client` already in `requirements.txt`. They conflict at the module level, so swap them:
+`requirements.txt` ships `chromadb-client`, which talks to a **server** — it has
+no local persistence. Start one on `localhost:8100`:
 
 ```sh
-pip uninstall chromadb-client
-pip install chromadb
-just chromadb     # runs ChromaDB server on localhost:8100
+pip uninstall -y chromadb-client && pip install chromadb
+just chromadb
 ```
 
-### Browser MCP (`@playwright/mcp`)
+Data lands in `$ODYSSEUS_DIR/data/chromadb`.
 
-The built-in Browser MCP server lets Odysseus drive a real browser via `npx @playwright/mcp`. It needs an actual chromium binary: the app resolves one from `ODYSSEUS_BROWSER_EXECUTABLE` (or a `chromium` on `$PATH`) and hands it to Playwright as `--executable-path` — and it **overrides** `PLAYWRIGHT_BROWSERS_PATH` with its own local cache, so the shell's bundled playwright-driver browsers can't satisfy it.
+## Browser MCP (`@playwright/mcp`)
 
-Because chromium is a ~1.7 GiB, Linux-only closure, it's kept out of the default shell. Enter the **opt-in browser shell** instead, which provisions chromium and exports `ODYSSEUS_BROWSER_EXECUTABLE`:
+The built-in Browser MCP server lets Odysseus drive a real browser via
+`npx @playwright/mcp`. It needs an actual chromium binary: the app resolves one
+from `ODYSSEUS_BROWSER_EXECUTABLE` (or a `chromium` on `$PATH`) and hands it to
+Playwright as `--executable-path` — and it **overrides**
+`PLAYWRIGHT_BROWSERS_PATH` with its own local cache, so the dev shell's
+playwright-driver browsers cannot satisfy it.
+
+Because chromium is a ~1.7 GiB, Linux-only closure, it is kept out of the
+default shell. Use the opt-in browser shell, which provisions chromium and
+exports `ODYSSEUS_BROWSER_EXECUTABLE`:
 
 ```sh
-nix develop .#browser   # Linux only; default shell + chromium for the Browser MCP
-just playwright-mcp     # seed @playwright/mcp into the npx cache (one-time)
+nix develop .#browser
 ```
 
-Then start the app (`just run`). To use your own browser instead of the opt-in shell, export `ODYSSEUS_BROWSER_EXECUTABLE=/path/to/chromium` before launching.
-
-## CI & git pre-push hook
-
-`.github/workflows/ci.yml` runs `just test` on every push and PR across a matrix of native runners — `ubuntu-latest` (x86_64-linux), `ubuntu-24.04-arm` (aarch64-linux), and `macos-latest` (aarch64-darwin) — via the [Determinate Systems nix-installer](https://github.com/DeterminateSystems/nix-installer-action). No external cache service required — runs are 2-5 min cold; add Cachix or FlakeHub later if you need it faster.
-
-> `x86_64-darwin` (Intel Mac) is **no longer supported**: nixpkgs 26.11 dropped the platform, so `legacyPackages.x86_64-darwin` throws during evaluation. The flake filters it out of its system list, and there is no `macos-13` CI leg to re-add. Intel Macs need a nixpkgs pinned to the `nixpkgs-26.05-darwin` branch, which receives security fixes until the end of 2026.
-
-To require those checks before merging, enable branch protection on `main` in repo settings → Branches → Add rule:
-
-- "Require status checks to pass before merging"
-- Add `test (ubuntu-latest)`, `test (ubuntu-24.04-arm)`, and `test (macos-latest)` as required checks.
-
-To also block local pushes that don't pass, install the pre-push hook once per clone:
+Optionally seed the npx cache first so the MCP server starts without a download
+on first use:
 
 ```sh
-just install-hooks    # → git config core.hooksPath .githooks
+just playwright-mcp
 ```
 
-The hook runs `just test` before every push; bypass for a single push with `git push --no-verify`.
+Then start the app (`just run`). To use your own browser instead, export
+`ODYSSEUS_BROWSER_EXECUTABLE=/path/to/chromium` before launching.
 
-## direnv
+# What's bundled
 
-A `.envrc` ships in this folder. Install [direnv](https://direnv.net/), then:
-
-```sh
-cd odysseus-nix
-direnv allow
-```
-
-The shell now auto-loads whenever you `cd` in. The `.envrc` also includes `watch_file flake.lock`, so direnv automatically re-enters the shell after `nix flake update` — no manual `direnv reload` needed.
-
-## What's bundled
-
-System-level deps mirror the project Dockerfile so native Python wheels build cleanly on every supported arch:
+System-level deps mirror the project `Dockerfile` so native Python wheels build
+cleanly on every supported arch:
 
 - Python 3.14 + pip + virtualenv
-- Node.js (default LTS from the consuming nixpkgs — currently 22/24 on `nixos-unstable`)
+- Node.js (default LTS from the consuming nixpkgs — 24.x on the pinned lock)
 - just (task runner)
 - git, cmake, curl, tmux, openssh, pkg-config
 - nixpkgs-fmt, statix, deadnix, shellcheck (used by `just test`)
-- zlib, openssl, libffi, libxml2/xslt (wheel build headers), file/libmagic (python-magic runtime)
+- zlib, openssl, libffi, libxml2/xslt (wheel build headers), file/libmagic
+  (python-magic runtime)
 - gosu (Linux only — used by the Docker entrypoint)
-- libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the Real-ESRGAN path)
-- playwright-driver.browsers (browser binaries pointed at by `PLAYWRIGHT_BROWSERS_PATH`; the `playwright` Python package and `@playwright/mcp` are installed separately via optional deps / npx)
+- libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the
+  Real-ESRGAN path)
 
-**Optional Python deps** (auto-installed when `ODYSSEUS_INSTALL_OPTIONAL=1`, which is the default):
+Python packages are installed via `pip` into the venv, not Nix — that keeps the
+flake small and avoids fighting nixpkgs over PyPI versions like
+`chromadb-client` and `fastembed`.
 
-- python-magic — content-based MIME sniffing for uploads (falls back to extension detection without it; system `libmagic` is bundled)
-- faster-whisper, ddgs, PyMuPDF, markitdown — see `requirements-optional.txt` for details
+> [!NOTE]
+> The **dev shell** additionally exports `PLAYWRIGHT_BROWSERS_PATH` at
+> `playwright-driver.browsers` so Playwright needs no runtime browser download.
+> That store path is a dev-shell environment variable, **not** part of the
+> `odysseus-env` package closure — `home.packages` users do not get it.
 
-Python packages themselves are installed via `pip` into the venv, not Nix — keeps the flake small and avoids fighting nixpkgs over PyPI versions like `chromadb-client` and `fastembed`.
+**Optional Python deps** — installed from `requirements-optional.txt` unless
+`ODYSSEUS_INSTALL_OPTIONAL=0`:
 
-## Flake outputs
+- `faster-whisper` — local transcription (GPU-accelerated when available)
+- `ddgs` — DuckDuckGo as a search provider
+- `PyMuPDF` — richer PDF extraction
+- `markitdown[docx,pptx,xlsx,xls]` — Office document conversion
+- `kokoro` + `soundfile` — local text-to-speech. Marker-gated to
+  `python_version >= "3.11" and < "3.13"`, so **pip skips both on this flake's
+  Python 3.14**.
+
+> [!WARNING]
+> Upstream installs `python-magic` in its `Dockerfile` only — it appears in no
+> requirements file. This flake bundles the `libmagic` shared library but never
+> `pip install`s the wrapper, so content-based MIME sniffing in
+> `src/upload_handler.py` falls back to extension detection under `nix develop` /
+> `nix run`. Run `pip install python-magic==0.4.27` in the venv to match the
+> container.
+
+# Flake outputs
 
 | Output                            | What                                                                                         |
 | --------------------------------- | -------------------------------------------------------------------------------------------- |
@@ -297,8 +411,50 @@ Python packages themselves are installed via `pip` into the venv, not Nix — ke
 | `packages.${system}.odysseus-env` | buildEnv of every bundled tool — for home-manager users who want everything surfaced.        |
 | `packages.${system}.odysseus-dev` | Launcher script that bootstraps a venv and runs uvicorn. Recommended for home-manager.       |
 | `apps.${system}.default`          | Same launcher, exposed for `nix run`.                                                        |
-| `formatter.${system}`             | `treefmt` (nixpkgs-fmt + shfmt + prettier).                                                  |
+| `checks.${system}.formatting`     | treefmt check — fails if the tree is unformatted. Enforced in CI.                            |
+| `formatter.${system}`             | `treefmt` (nixpkgs-fmt + shfmt + prettier), exposed as `nix fmt`.                            |
 
-## License
+# CI and the pre-push hook
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `just test` on every
+push and PR to `main`, across a matrix of native runners — `ubuntu-latest`
+(x86_64-linux), `ubuntu-24.04-arm` (aarch64-linux), and `macos-latest`
+(aarch64-darwin) — via the [Determinate Systems nix-installer][nix-installer].
+No external cache service is required; runs are 2–5 min cold.
+
+Release-branch pushes do **not** trigger CI automatically. Dispatch it manually:
+
+```sh
+gh workflow run ci.yml --ref v0.8.0
+```
+
+To require the checks before merging, enable branch protection on `main` (repo
+settings → Branches → Add rule) with "Require status checks to pass before
+merging" and add `test (ubuntu-latest)`, `test (ubuntu-24.04-arm)`, and
+`test (macos-latest)`.
+
+Install the local hook so the same gate runs before every push:
+
+```sh
+just install-hooks   # git config core.hooksPath .githooks
+```
+
+# Contribute
+
+`just test` must print `✅ all checks passed` before anything is pushed — that is
+the whole contract. Formatting is `nix fmt` (treefmt: nixpkgs-fmt, shfmt,
+prettier); lint is statix + deadnix + shellcheck.
+
+When upstream's `Dockerfile` apt list changes, re-check that `commonDeps` /
+`linuxDeps` in [`flake.nix`](flake.nix) still cover it. Release conventions and
+the full changelog live in [CHANGELOG.md](CHANGELOG.md).
+
+# License
 
 [MIT](./LICENSE).
+
+[odysseus]: https://github.com/odysseus-dev/odysseus
+[nix]: https://nixos.org/download
+[determinate]: https://determinate.systems/nix
+[direnv]: https://direnv.net/
+[nix-installer]: https://github.com/DeterminateSystems/nix-installer-action
