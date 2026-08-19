@@ -11,6 +11,40 @@ sync the managed cache clone to it.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-19
+
+First stable release. The flake's interface — outputs, env knobs, and the
+release-branch rev-pinning contract — is considered settled; breaking changes to
+it now warrant a major bump.
+
+### Added
+
+- Auto-install `python-magic==0.4.27` in **both** the `nix run` launcher and the
+  dev shell. The package is in none of upstream's requirements files: it resolves
+  `libmagic` at import time, so upstream installs it in the `Dockerfile` only.
+  `commonDeps` already shipped `file` (`libmagic.so.1`), but without the Python
+  wrapper the content-based MIME sniffing in `src/upload_handler.py` silently
+  degraded to extension detection here. The install is shared between the two
+  call sites from one definition, marker-guarded at
+  `$VENV_DIR/.python-magic-<version>.installed` (so bumping the version
+  re-installs), and non-fatal — a failure warns and startup continues. The pinned
+  version tracks the Dockerfile and is also the newest release on PyPI
+  (0.4.27, 2022-06-07).
+
+### Changed
+
+- Lead `README.md` with an `> [!IMPORTANT]` disclaimer that upstream Odysseus
+  development has **moved to the `dev` branch** — `dev` is upstream's default
+  branch and everything from it onwards is what this flake tracks; upstream's
+  `main` still exists but is not where development happens, so it must not be
+  pinned. The note also records the organisation transfer from
+  `pewdiepie-archdaemon` to `odysseus-dev`.
+- Re-pin upstream `odysseusRev` `43682d4` → `5c83501` (live `dev` HEAD). Drift is
+  a single app-level commit (`fix(time): prefer IANA timezone name over offset`);
+  `Dockerfile`, `requirements.txt`, `requirements-optional.txt`, `package.json`,
+  `package-lock.json` and `pyproject.toml` are all byte-identical, so there are no
+  dep changes.
+
 ## [0.8.0] - 2026-08-19
 
 ### Removed
@@ -159,7 +193,8 @@ sync the managed cache clone to it.
   declarations. Pins upstream `odysseusRev` `e5b9275`.
 
 [doom-readme]: https://github.com/doomemacs/doomemacs/blob/master/README.md
-[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.8.0...v1.0.0
 [0.8.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.5.0...v0.6.0

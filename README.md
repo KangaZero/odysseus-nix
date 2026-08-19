@@ -15,6 +15,17 @@
 
 ---
 
+> [!IMPORTANT]
+> **Upstream Odysseus development has moved to the `dev` branch.** `dev` is now
+> upstream's default branch, and everything from the `dev` branch onwards is what
+> this flake tracks — rolling `main` clones upstream's default branch, and every
+> release branch pins a commit from it. Upstream's `main` branch still exists but
+> is **not** where development happens, so do not pin it. Upstream also
+> transferred organisation from `pewdiepie-archdaemon` to
+> [`odysseus-dev`](https://github.com/odysseus-dev/odysseus); the old URLs
+> redirect, but `odysseus-dev` is the canonical location and the one this flake
+> clones from.
+
 ### Table of Contents
 
 - [Introduction](#introduction)
@@ -94,8 +105,9 @@ What that does:
 
 1. Clones [odysseus][odysseus] into `${XDG_CACHE_HOME:-~/.cache}/odysseus-nix/odysseus`
    (one-time, shallow).
-2. Creates `.venv/` in that checkout and installs `requirements.txt` — plus
-   `requirements-optional.txt` unless `ODYSSEUS_INSTALL_OPTIONAL=0`.
+2. Creates `.venv/` in that checkout and installs `requirements.txt`,
+   `python-magic`, and `requirements-optional.txt` (the last unless
+   `ODYSSEUS_INSTALL_OPTIONAL=0`).
 3. Starts `uvicorn app:app --reload` on `:7000`.
 
 Subsequent runs reuse the cache; installs are skipped unless the manifests
@@ -144,13 +156,12 @@ nix develop github:KangaZero/odysseus-nix/<commit-sha>
 ```
 
 For a reproducible **upstream odysseus checkout**, target a **release branch**.
-Release branches (`v0.1.0`, `v0.2.0`, `v0.3.0`, `v0.3.1`, `v0.4.0`, `v0.5.0`,
-`v0.6.0`, `v0.7.0`, `v0.8.0`, …) bake in a specific upstream rev, and the managed
+Release branches (`v0.1.0` … `v0.8.0`, `v1.0.0`, …) bake in a specific upstream rev, and the managed
 cache clone auto-syncs to it on first run, so two machines get the same checkout:
 
 ```sh
-nix run --refresh github:KangaZero/odysseus-nix/v0.8.0
-nix develop github:KangaZero/odysseus-nix/v0.8.0
+nix run --refresh github:KangaZero/odysseus-nix/v1.0.0
+nix develop github:KangaZero/odysseus-nix/v1.0.0
 ```
 
 > [!NOTE]
@@ -258,9 +269,9 @@ Entering `nix develop` from this repo:
 2. Creates `data/`, `logs/`, `services/cache/search/` — the app expects them on
    first boot.
 3. Creates/activates `.venv/` inside the checkout.
-4. Installs `requirements.txt`, `requirements-optional.txt`, and npm deps — but
-   only when those manifests change (mtime-marker check, so re-entering is a
-   no-op).
+4. Installs `requirements.txt`, `python-magic`, `requirements-optional.txt`, and
+   npm deps — but only when those manifests change (mtime-marker check, so
+   re-entering is a no-op).
 5. Exports `JUST_JUSTFILE` so `just <recipe>` works from anywhere in the shell.
 
 Env knobs (apply to both `nix run` and `nix develop` unless noted):
@@ -367,7 +378,8 @@ cleanly on every supported arch:
 - git, cmake, curl, tmux, openssh, pkg-config
 - nixpkgs-fmt, statix, deadnix, shellcheck (used by `just test`)
 - zlib, openssl, libffi, libxml2/xslt (wheel build headers), file/libmagic
-  (python-magic runtime)
+  (the shared library `python-magic` dlopens; the wrapper itself is pip-installed
+  automatically — see the note below)
 - gosu (Linux only — used by the Docker entrypoint)
 - libGL, glib, libxcb (Linux only — opencv/cv2 runtime libs for the
   Real-ESRGAN path)
@@ -393,13 +405,15 @@ flake small and avoids fighting nixpkgs over PyPI versions like
   `python_version >= "3.11" and < "3.13"`, so **pip skips both on this flake's
   Python 3.14**.
 
-> [!WARNING]
-> Upstream installs `python-magic` in its `Dockerfile` only — it appears in no
-> requirements file. This flake bundles the `libmagic` shared library but never
-> `pip install`s the wrapper, so content-based MIME sniffing in
-> `src/upload_handler.py` falls back to extension detection under `nix develop` /
-> `nix run`. Run `pip install python-magic==0.4.27` in the venv to match the
-> container.
+> [!NOTE]
+> `python-magic` appears in **no** requirements file — upstream installs it in
+> the `Dockerfile` only, because it resolves `libmagic` at import time. This
+> flake therefore installs `python-magic==0.4.27` itself (matching the
+> Dockerfile pin, which is also the newest release on PyPI) in both the launcher
+> and the dev shell, so content-based MIME sniffing in `src/upload_handler.py`
+> works here exactly as it does in the container. The install is marker-guarded
+> at `$VENV_DIR/.python-magic-<version>.installed` and is non-fatal — if it
+> fails, sniffing degrades to extension detection and startup continues.
 
 # Flake outputs
 
@@ -425,7 +439,7 @@ No external cache service is required; runs are 2–5 min cold.
 Release-branch pushes do **not** trigger CI automatically. Dispatch it manually:
 
 ```sh
-gh workflow run ci.yml --ref v0.8.0
+gh workflow run ci.yml --ref v1.0.0
 ```
 
 To require the checks before merging, enable branch protection on `main` (repo
