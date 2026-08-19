@@ -31,6 +31,14 @@ it now warrant a major bump.
   version tracks the Dockerfile and is also the newest release on PyPI
   (0.4.27, 2022-06-07).
 
+- Clone upstream's `dev` branch **by name** (`git clone --depth 1 --branch dev`)
+  instead of letting `git clone` follow the remote's `HEAD`. `dev` is upstream's
+  default today, so behaviour is unchanged — but upstream also keeps a stale,
+  non-default `main`, and naming the branch means this can never silently start
+  tracking it if the default is ever flipped. Overridable with the new
+  `ODYSSEUS_BRANCH` env knob for forks that use a different name. Release
+  branches are unaffected: they fetch an explicit SHA and never resolve a branch.
+
 ### Changed
 
 - Lead `README.md` with an `> [!IMPORTANT]` disclaimer that upstream Odysseus

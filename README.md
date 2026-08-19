@@ -18,9 +18,12 @@
 > [!IMPORTANT]
 > **Upstream Odysseus development has moved to the `dev` branch.** `dev` is now
 > upstream's default branch, and everything from the `dev` branch onwards is what
-> this flake tracks — rolling `main` clones upstream's default branch, and every
-> release branch pins a commit from it. Upstream's `main` branch still exists but
-> is **not** where development happens, so do not pin it. Upstream also
+> this flake tracks — rolling `main` clones `dev` **by name**, and every release
+> branch pins a commit from it. Upstream's `main` branch still exists but is
+> **not** where development happens, so nothing here points at it: the launcher
+> passes `--branch dev` explicitly rather than following the remote's `HEAD`, so
+> it cannot start tracking `main` even if upstream flips its default. Override
+> with `ODYSSEUS_BRANCH=<name>` for a fork that uses a different name. Upstream also
 > transferred organisation from `pewdiepie-archdaemon` to
 > [`odysseus-dev`](https://github.com/odysseus-dev/odysseus); the old URLs
 > redirect, but `odysseus-dev` is the canonical location and the one this flake
@@ -146,7 +149,7 @@ The dev shell looks for a sibling `../odysseus` checkout; point it anywhere with
 ## Pinning for reproducibility
 
 `nix run` and `nix develop` resolve `main` by default, which is **rolling** — the
-launcher shallow-clones upstream's default branch (`dev`) with no rev pin, so it
+launcher shallow-clones upstream's `dev` branch by name with no rev pin, so it
 tracks upstream HEAD and `ODYSSEUS_REV` has _no effect_. Pinning the flake ref
 pins the _Nix env_, not the odysseus checkout:
 
@@ -276,18 +279,19 @@ Entering `nix develop` from this repo:
 
 Env knobs (apply to both `nix run` and `nix develop` unless noted):
 
-| Variable                      | Default                                                                | Effect                                                                     |
-| ----------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `ODYSSEUS_DIR`                | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                             |
-| `ODYSSEUS_REPO_URL`           | `https://github.com/odysseus-dev/odysseus.git`                         | Clone URL used by `nix run` when no checkout is found (point at a fork).   |
-| `ODYSSEUS_REV`                | the branch's baked-in `odysseusRev`                                    | **Release branches only.** Full SHA to sync the managed cache clone to.    |
-| `ODYSSEUS_NO_SYNC`            | `0`                                                                    | **Release branches only.** Set to `1` to skip syncing the cache clone.     |
-| `ODYSSEUS_AUTO_INSTALL`       | `1`                                                                    | **Dev shell only.** Set to `0` to skip auto-`pip install` / `npm install`. |
-| `ODYSSEUS_INSTALL_OPTIONAL`   | `1`                                                                    | Set to `0` to skip installing `requirements-optional.txt`.                 |
-| `ODYSSEUS_BROWSER_EXECUTABLE` | unset (set by `nix develop .#browser`)                                 | Browser binary handed to the built-in Browser MCP server.                  |
-| `APP_PORT`                    | `7000`                                                                 | Port for `just run` / `nix run`.                                           |
-| `VENV_DIR`                    | `.venv` inside the resolved checkout                                   | Path to the Python venv.                                                   |
-| `XDG_CACHE_HOME`              | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).  |
+| Variable                      | Default                                                                | Effect                                                                       |
+| ----------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `ODYSSEUS_DIR`                | `nix run`: auto-detected or cache clone · `nix develop`: `../odysseus` | Path to the odysseus checkout.                                               |
+| `ODYSSEUS_REPO_URL`           | `https://github.com/odysseus-dev/odysseus.git`                         | Clone URL used by `nix run` when no checkout is found (point at a fork).     |
+| `ODYSSEUS_BRANCH`             | `dev`                                                                  | Upstream branch `nix run` clones by name. Never follows the remote's `HEAD`. |
+| `ODYSSEUS_REV`                | the branch's baked-in `odysseusRev`                                    | **Release branches only.** Full SHA to sync the managed cache clone to.      |
+| `ODYSSEUS_NO_SYNC`            | `0`                                                                    | **Release branches only.** Set to `1` to skip syncing the cache clone.       |
+| `ODYSSEUS_AUTO_INSTALL`       | `1`                                                                    | **Dev shell only.** Set to `0` to skip auto-`pip install` / `npm install`.   |
+| `ODYSSEUS_INSTALL_OPTIONAL`   | `1`                                                                    | Set to `0` to skip installing `requirements-optional.txt`.                   |
+| `ODYSSEUS_BROWSER_EXECUTABLE` | unset (set by `nix develop .#browser`)                                 | Browser binary handed to the built-in Browser MCP server.                    |
+| `APP_PORT`                    | `7000`                                                                 | Port for `just run` / `nix run`.                                             |
+| `VENV_DIR`                    | `.venv` inside the resolved checkout                                   | Path to the Python venv.                                                     |
+| `XDG_CACHE_HOME`              | `~/.cache`                                                             | Parent of the auto-clone cache (`$XDG_CACHE_HOME/odysseus-nix/odysseus`).    |
 
 # Recipes
 

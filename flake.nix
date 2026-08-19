@@ -180,6 +180,14 @@
                 # Where to look for / clone the odysseus checkout. Override
                 # the clone URL with $ODYSSEUS_REPO_URL (e.g. point at a fork).
                 repo_url="''${ODYSSEUS_REPO_URL:-https://github.com/odysseus-dev/odysseus.git}"
+
+                # Upstream odysseus develops on `dev`, which is also its default
+                # branch — but it still has a stale, non-default `main`. Name the
+                # branch explicitly rather than letting `git clone` follow the
+                # remote's HEAD, so this can never silently start tracking `main`
+                # if upstream ever flips its default. Override for forks whose
+                # development branch is named differently.
+                upstream_branch="''${ODYSSEUS_BRANCH:-dev}"
                 cache_root="''${XDG_CACHE_HOME:-$HOME/.cache}/odysseus-nix"
                 cache_dir="$cache_root/odysseus"
 
@@ -192,10 +200,11 @@
                   else
                     target="$cache_dir"
                     if [ ! -d "$target" ]; then
-                      echo "no odysseus checkout found — cloning into $target"
+                      echo "no odysseus checkout found — cloning $upstream_branch into $target"
                       echo "(override with: ODYSSEUS_DIR=/path/to/odysseus, or pass as arg)"
+                      echo "(override branch: ODYSSEUS_BRANCH=<name>)"
                       mkdir -p "$cache_root"
-                      git clone --depth 1 "$repo_url" "$target"
+                      git clone --depth 1 --branch "$upstream_branch" "$repo_url" "$target"
                     fi
                   fi
                 fi
