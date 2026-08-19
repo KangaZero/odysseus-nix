@@ -12,10 +12,10 @@ on:
 #   "test (ubuntu-24.04-arm)" → aarch64-linux
 #   "test (macos-latest)"     → aarch64-darwin
 # Mark them required in repo settings to block merges/pushes that don't pass.
-# NOTE: x86_64-darwin (macos-13) is intentionally NOT in the matrix below — the
-# runner was not retrievable on this repo — so it must NOT be marked required
-# (a required check that never runs would block every merge). The flake still
-# declares x86_64-darwin; re-add the `macos-13` leg to restore that coverage.
+# NOTE: there is no x86_64-darwin (macos-13) leg and there should not be one:
+# nixpkgs 26.11 dropped the platform, so the flake filters it out of its system
+# list. Never mark a check that never runs as required — it would block every
+# merge.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -30,8 +30,8 @@ jobs:
         #   ubuntu-latest    → x86_64-linux
         #   ubuntu-24.04-arm → aarch64-linux
         #   macos-latest     → aarch64-darwin (Apple Silicon)
-        # x86_64-darwin (macos-13, Intel) is omitted — the runner was not
-        # retrievable here; re-add `macos-13` to restore Intel-mac coverage.
+        # x86_64-darwin (macos-13, Intel) is gone for good — nixpkgs 26.11
+        # dropped the platform, so the flake no longer targets it.
         os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:

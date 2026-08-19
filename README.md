@@ -6,7 +6,6 @@ Works on:
 
 - `x86_64-linux`
 - `aarch64-linux`
-- `x86_64-darwin` (Intel Mac)
 - `aarch64-darwin` (Apple Silicon)
 
 ## Quickstart
@@ -241,7 +240,7 @@ Then start the app (`just run`). To use your own browser instead of the opt-in s
 
 `.github/workflows/ci.yml` runs `just test` on every push and PR across a matrix of native runners — `ubuntu-latest` (x86_64-linux), `ubuntu-24.04-arm` (aarch64-linux), and `macos-latest` (aarch64-darwin) — via the [Determinate Systems nix-installer](https://github.com/DeterminateSystems/nix-installer-action). No external cache service required — runs are 2-5 min cold; add Cachix or FlakeHub later if you need it faster.
 
-> The flake also supports `x86_64-darwin` (Intel Mac), but it is **not** in the CI matrix — the `macos-13` runner was not retrievable on this repo, and nixpkgs is sunsetting `x86_64-darwin` in 26.05. Re-add the `macos-13` leg to restore that build coverage.
+> `x86_64-darwin` (Intel Mac) is **no longer supported**: nixpkgs 26.11 dropped the platform, so `legacyPackages.x86_64-darwin` throws during evaluation. The flake filters it out of its system list, and there is no `macos-13` CI leg to re-add. Intel Macs need a nixpkgs pinned to the `nixpkgs-26.05-darwin` branch, which receives security fixes until the end of 2026.
 
 To require those checks before merging, enable branch protection on `main` in repo settings → Branches → Add rule:
 
