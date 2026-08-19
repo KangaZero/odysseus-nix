@@ -11,6 +11,36 @@ sync the managed cache clone to it.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-19
+
+### Removed
+
+- **`x86_64-darwin` (Intel Mac) support.** nixpkgs 26.11 dropped the platform:
+  `legacyPackages.x86_64-darwin` now throws during _evaluation_, which broke
+  `nix flake check --all-systems` even with `--no-build`. `forEachSystem` maps
+  over `lib.remove "x86_64-darwin" (import systems)` instead of the raw
+  `nix-systems/default` list, so the flake targets `x86_64-linux`,
+  `aarch64-linux`, and `aarch64-darwin`. Filtering (rather than hardcoding the
+  list) keeps the `systems` input and its `inputs.systems.follows` override
+  contract. CI is unaffected — there has been no `macos-13` leg since
+  2026-06. Intel Macs need a nixpkgs pinned to `nixpkgs-26.05-darwin`, which
+  receives security fixes until the end of 2026.
+
+### Changed
+
+- Bump `flake.lock`: nixpkgs `d407951` (2026-07-05) → `0ae2bc1` (2026-08-18),
+  moving the unstable channel to 26.11 (`python314` 3.14.4 → 3.14.7, `nodejs`
+  24.19.0); treefmt-nix `db94781` (2026-05-31) → `27b3b12` (2026-08-16). The
+  `systems` input was already at its tip.
+- Re-pin upstream `odysseusRev` `d8a2059` → `43682d4` (live `dev` HEAD). The
+  115-commit drift is app-level: `Dockerfile`, `package.json`,
+  `package-lock.json`, and `pyproject.toml` are byte-identical, so the
+  Dockerfile-mirrored system dep set is untouched. `requirements.txt` constrains
+  `mcp` to `<2` (the SDK v2 rewrite is breaking) and `requirements-optional.txt`
+  adds `kokoro` + `soundfile` gated to `python_version >= "3.11" and < "3.13"` —
+  this flake ships Python 3.14, so pip skips both and no new native deps are
+  needed.
+
 ## [0.7.0] - 2026-07-27
 
 ### Added
@@ -112,7 +142,8 @@ sync the managed cache clone to it.
   mirrored system deps), `nix run` launcher, and multi-arch platform
   declarations. Pins upstream `odysseusRev` `e5b9275`.
 
-[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/KangaZero/odysseus-nix/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/KangaZero/odysseus-nix/compare/v0.4.0...v0.5.0
