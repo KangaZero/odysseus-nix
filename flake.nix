@@ -119,6 +119,27 @@
 
             allDeps = commonDeps ++ linuxDeps ++ darwinDeps;
 
+            # python-magic is deliberately absent from upstream's requirements
+            # files: it resolves libmagic at *import* time, so upstream installs
+            # it in the Dockerfile instead (`pip install python-magic==0.4.27`,
+            # alongside apt `libmagic1`). commonDeps already ships `file`
+            # (libmagic.so.1); without the Python wrapper the content-based MIME
+            # sniffing in src/upload_handler.py silently degrades to extension
+            # detection. Mirror the Dockerfile so `nix develop` / `nix run`
+            # behave like the container. Version tracks the Dockerfile pin,
+            # which is also the newest release on PyPI (0.4.27, 2022-06-07).
+            # Shared by the launcher and the dev shell from one edit point; the
+            # marker embeds the version, so bumping it re-installs.
+            pythonMagicVersion = "0.4.27";
+            installPythonMagic = ''
+              MAGIC_MARKER="$VENV_DIR/.python-magic-${pythonMagicVersion}.installed"
+              if [ ! -f "$MAGIC_MARKER" ]; then
+                echo "installing python-magic ${pythonMagicVersion} (libmagic wrapper — a Dockerfile-only dep)…"
+                pip install "python-magic==${pythonMagicVersion}" && touch "$MAGIC_MARKER" \
+                  || echo "⚠  python-magic install failed — MIME sniffing falls back to file extensions" >&2
+              fi
+            '';
+
             # Runtime dlopen path for pip-installed manylinux wheels (numpy,
             # onnxruntime, PyMuPDF, etc.) — they ship binaries linked against
             # `libstdc++.so.6` / `libz.so.1` and won't find them under Nix
@@ -214,6 +235,8 @@
                   touch "$MARKER"
                 fi
 
+                ${installPythonMagic}
+
                 REQS_OPT="$PWD/requirements-optional.txt"
                 REQS_OPT_MARKER="$VENV_DIR/.requirements-optional.installed"
                 if [ "''${ODYSSEUS_INSTALL_OPTIONAL:-1}" = "1" ] && [ -f "$REQS_OPT" ] \
@@ -301,6 +324,8 @@
                     pip install -r "$REQS" && touch "$REQS_MARKER" \
                       || echo "⚠  pip install failed — run \`pip install -r requirements.txt\` to retry" >&2
                   fi
+
+                  ${installPythonMagic}
 
                   REQS_OPT="$PWD/requirements-optional.txt"
                   REQS_OPT_MARKER="$VENV_DIR/.requirements-optional.installed"
